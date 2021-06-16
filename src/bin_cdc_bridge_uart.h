@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2021 a-pushkin on GitHub
+ * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,13 @@
  *
  */
 
-#ifndef LED_H
-#define LED_H
+#ifndef APP_CDC_BRIDGE_UART_H
+#define APP_CDC_BRIDGE_UART_H
 
-void led_init(void);
-void led_task(void);
-void led_signal_activity(uint total_bits);
+#include "tusb.h"
+
+void cdc_uart_init(void);
+void cdc_uart_task(void);
+void cdc_uart_line_coding(cdc_line_coding_t const* line_coding);
 
 #endif

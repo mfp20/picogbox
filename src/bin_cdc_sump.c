@@ -1,44 +1,19 @@
 /*
- * The MIT License (MIT)
- *
- * Copyright (c) 2021 Jaroslav Kysela <perex@perex.cz>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- *
  * Protocol link: https://www.sump.org/projects/analyzer/protocol
- *
  */
 
-#include <pico/stdlib.h>
-#include "hardware/clocks.h"
-#include "hardware/irq.h"
-#include "hardware/pio.h"
-#include "hardware/dma.h"
-#include "hardware/pwm.h"
-#include "hardware/structs/bus_ctrl.h"
-
+#include "config.h"
+#include "pico_led.h"
 #include "tusb.h"
-#include "led.h"
+#include "bin_cdc_sump.h"
 
-#include "picoprobe_config.h"
-#include "cdc_sump.h"
+#include <pico/stdlib.h>
+#include <hardware/clocks.h>
+#include <hardware/irq.h>
+#include <hardware/pio.h>
+#include <hardware/dma.h>
+#include <hardware/pwm.h>
+#include <hardware/structs/bus_ctrl.h>
 
 #if false
 #define sump_irq_debug(format,args...) picoprobe_debug(format, ## args)
@@ -48,9 +23,9 @@
 
 #define SAMPLING_DIVIDER	4	// minimal sysclk sampling divider
 
-#define SAMPLING_BITS		(SUMP_SAMPLING_GPIO_LAST-SUMP_SAMPLING_GPIO_FIRST+1)
+#define SAMPLING_BITS		(APP_CDC_SUMP_PIN_SAMPLING_LAST-APP_CDC_SUMP_PIN_SAMPLING_FIRST+1)
 #define SAMPLING_BYTES		((SAMPLING_BITS+7)/8)
-#define SAMPLING_GPIO_MASK	(((1 << SAMPLING_BITS) - 1) << SUMP_SAMPLING_GPIO_FIRST)
+#define SAMPLING_GPIO_MASK	(((1 << SAMPLING_BITS) - 1) << APP_CDC_SUMP_PIN_SAMPLING_FIRST)
 
 #if SAMPLING_BITS != 8 && SAMPLING_BITS != 16
 #error "Correct sampling width (8 or 16 bits)"
@@ -206,15 +181,15 @@ sump_do_meta(void)
     ptr = sump_add_meta1(ptr, SUMP_META_PROTOCOL_B, 2);
     *ptr++ = SUMP_META_END;
     while (wptr != ptr)
-        wptr += tud_cdc_n_write(SUMP_CDC_INTF, wptr, ptr - wptr);
-    tud_cdc_n_write_flush(SUMP_CDC_INTF);
+        wptr += tud_cdc_n_write(APP_CDC_SUMP_INTF, wptr, ptr - wptr);
+    tud_cdc_n_write_flush(APP_CDC_SUMP_INTF);
 }
 
 static void
 sump_do_id(void)
 {
-    tud_cdc_n_write_str(SUMP_CDC_INTF, "1ALS");
-    tud_cdc_n_write_flush(SUMP_CDC_INTF);
+    tud_cdc_n_write_str(APP_CDC_SUMP_INTF, "1ALS");
+    tud_cdc_n_write_flush(APP_CDC_SUMP_INTF);
 }
 
 static uint32_t
@@ -266,7 +241,7 @@ static void
 sump_pio_init(void)
 {
     pio_sm_config c;
-    uint off, gpio = SUMP_SAMPLING_GPIO_FIRST, divider;
+    uint off, gpio = APP_CDC_SUMP_PIN_SAMPLING_FIRST, divider;
 
 #if SAMPLING_BITS > 8
     if (sump.width == 1 && (sump.flags & SUMP_FLAG1_GR0_DISABLE) != 0)
@@ -333,15 +308,15 @@ sump_calib_init(void)
     clkdiv = clksys / clock / top;
 
     // pwm setup
-    slice = pwm_gpio_to_slice_num(SUMP_SAMPLING_GPIO_TEST);
-    gpio_set_function(SUMP_SAMPLING_GPIO_TEST, GPIO_FUNC_PWM);
+    slice = pwm_gpio_to_slice_num(APP_CDC_SUMP_PIN_SAMPLING_TEST);
+    gpio_set_function(APP_CDC_SUMP_PIN_SAMPLING_TEST, GPIO_FUNC_PWM);
     pwm_config c = pwm_get_default_config();
     pwm_config_set_wrap(&c, top - 1);
     pwm_config_set_clkdiv_int(&c, clkdiv);
     pwm_init(slice, &c, false);
     pwm_set_both_levels(slice, level_a, level_a);
     picoprobe_debug("%s(): gpio=%u clkdiv=%u top=%u level=%u/%u freq=%.4fMhz (req %.4fMhz)\n",
-                    __func__, SUMP_SAMPLING_GPIO_TEST, clkdiv, top, level_a, level_a,
+                    __func__, APP_CDC_SUMP_PIN_SAMPLING_TEST, clkdiv, top, level_a, level_a,
                     (float)clksys / (float)clkdiv / (float)top / 1000000.0,
                     (float)clock / 1000000.0);
     return 1u << slice;
@@ -351,7 +326,7 @@ static uint32_t
 sump_test_init(void)
 {
     // Initialize test PWMs
-    const uint32_t gpio = SUMP_SAMPLING_GPIO_FIRST;
+    const uint32_t gpio = APP_CDC_SUMP_PIN_SAMPLING_FIRST;
     uint32_t mask;
     // 10Mhz PWM
     mask = sump_pwm_slice_init(gpio, 10000000, false);
@@ -369,7 +344,7 @@ sump_test_init(void)
 static void
 sump_test_done(void)
 {
-    const uint32_t gpio = SUMP_SAMPLING_GPIO_FIRST;
+    const uint32_t gpio = APP_CDC_SUMP_PIN_SAMPLING_FIRST;
     uint32_t i;
 
     pwm_set_enabled(pwm_gpio_to_slice_num(gpio), false);
@@ -378,10 +353,10 @@ sump_test_done(void)
 #if SAMPLING_BITS > 8
     pwm_set_enabled(pwm_gpio_to_slice_num(gpio + 8), false);
 #endif
-    for (i = SUMP_SAMPLING_GPIO_FIRST; i <= SUMP_SAMPLING_GPIO_LAST; i++)
+    for (i = APP_CDC_SUMP_PIN_SAMPLING_FIRST; i <= APP_CDC_SUMP_PIN_SAMPLING_LAST; i++)
         gpio_set_function(i, GPIO_FUNC_NULL);
     // test pin
-    pwm_set_enabled(SUMP_SAMPLING_GPIO_TEST, false);
+    pwm_set_enabled(APP_CDC_SUMP_PIN_SAMPLING_TEST, false);
 }
 
 static void
@@ -1119,15 +1094,15 @@ cdc_sump_init(void)
     // GPIO init
     gpio_set_dir_in_masked(SAMPLING_GPIO_MASK);
     gpio_put_masked(SAMPLING_GPIO_MASK, 0);
-    for (i = SUMP_SAMPLING_GPIO_FIRST; i <= SUMP_SAMPLING_GPIO_LAST; i++) {
+    for (i = APP_CDC_SUMP_PIN_SAMPLING_FIRST; i <= APP_CDC_SUMP_PIN_SAMPLING_LAST; i++) {
         gpio_set_function(i, GPIO_FUNC_NULL);
         gpio_set_pulls(i, false, false);
     }
 
     // test GPIO pin
-    gpio_set_dir(SUMP_SAMPLING_GPIO_TEST, true);
-    gpio_put(SUMP_SAMPLING_GPIO_TEST, true);
-    gpio_set_function(SUMP_SAMPLING_GPIO_TEST, GPIO_FUNC_PWM);
+    gpio_set_dir(APP_CDC_SUMP_PIN_SAMPLING_TEST, true);
+    gpio_put(APP_CDC_SUMP_PIN_SAMPLING_TEST, true);
+    gpio_set_function(APP_CDC_SUMP_PIN_SAMPLING_TEST, GPIO_FUNC_PWM);
 
     // set exclusive interrupt handler
     irq_set_enabled(SAMPLING_DMA_IRQ, false);
@@ -1145,20 +1120,20 @@ cdc_sump_task(void)
 {
     uint8_t buf[MAX_UART_PKT];
 
-    if (tud_cdc_n_connected(SUMP_CDC_INTF)) {
+    if (tud_cdc_n_connected(APP_CDC_SUMP_INTF)) {
         if (!sump.cdc_connected) {
             cdc_sump_init_connect();
             sump.cdc_connected = true;
         }
         if (sump.state == SUMP_STATE_DUMP || sump.state == SUMP_STATE_ERROR) {
-            if (tud_cdc_n_write_available(SUMP_CDC_INTF) >= sizeof(buf)) {
+            if (tud_cdc_n_write_available(APP_CDC_SUMP_INTF) >= sizeof(buf)) {
                 uint tx_len = sump_fill_tx(buf, sizeof(buf));
-                tud_cdc_n_write(SUMP_CDC_INTF, buf, tx_len);
-                tud_cdc_n_write_flush(SUMP_CDC_INTF);
+                tud_cdc_n_write(APP_CDC_SUMP_INTF, buf, tx_len);
+                tud_cdc_n_write_flush(APP_CDC_SUMP_INTF);
             }
         }
-	if (tud_cdc_n_available(SUMP_CDC_INTF)) {
-	    uint cmd_len = tud_cdc_n_read(SUMP_CDC_INTF, buf, sizeof(buf));
+	if (tud_cdc_n_available(APP_CDC_SUMP_INTF)) {
+	    uint cmd_len = tud_cdc_n_read(APP_CDC_SUMP_INTF, buf, sizeof(buf));
 	    sump_rx(buf, cmd_len);
 	}
 	if (sump.state == SUMP_STATE_TRIGGER || sump.state == SUMP_STATE_SAMPLING)

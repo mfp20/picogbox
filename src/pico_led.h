@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
+ * Copyright (c) 2021 a-pushkin on GitHub
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,10 +23,13 @@
  *
  */
 
-#ifndef PROBE_H_
-#define PROBE_H_
+#ifndef LED_H
+#define LED_H
 
-void probe_task(void);
-void probe_init(void);
+#include <stdio.h>
+
+void led_init(void);
+void led_task(void);
+void led_signal_activity(uint total_bits);
 
 #endif

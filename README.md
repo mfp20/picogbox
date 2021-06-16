@@ -1,15 +1,28 @@
-Picoprobe Dual SUMP
-===========================================================================
+Picobox
+=======
 
-This is a fork of picoprobe. I added a second CDC endpoint as a uart0<->usb bridge so that both uarts can be used from the host.
-Then I merged the [SUMP logic analyzer](https://github.com/perexg/picoprobe-sump) and [a cdc_sump.h stub file from](https://github.com/PoroCYon/picoprobe-sump)
-as in the original repo the file was completely missing. As PoroCYon reported, his cdc_sump.h file isn't good enough but ... it builds.
-A part from adapting the CDCs and moving gpio conf from cdc_sump.c to picoprobe_config.h, I didn't change anything both in picoprobe and sump logic.
-The project is in standby until someone will fix the sump stuff.
-The following is the original README from picoprobe-sump project.
+This is a mashup of projects:
+- [Microshell](https://github.com/marcinbor85/microshell)
+- [picoprobe](https://github.com/raspberrypi/picoprobe)
+- [SUMP logic analyzer](https://github.com/perexg/picoprobe-sump) + [random cdc_sump.h](https://github.com/PoroCYon/picoprobe-sump)
+- [Sigrock logic analyzer](https://github.com/gamblor21/rp2040-logic-analyzer)
 
-SUMP protocol logic analyzer
-===========================================================================
+Currently they barely stick together using some Superglue and Duck Tape. The Plan from main.cpp:
+
+// USB CDC0 (user console)
+// USB CDC1 (bridge1: defaults to UART0)
+// USB CDC2 (bridge2: defaults to UART1)
+// USB CDC3 (bridge3: defaults to I2C master)
+// USB CDC4 (bridge4: defaults to SPI master)
+// USB CDC5 (serial data application: defaults to SUMP)
+// USB VENDOR (raw data application: defaults to picoprobe)
+// UART0 for Picobox itself (ex: debug)
+// UART1 for target device
+
+
+Logic Analyzer: SUMP protocol
+=============================
+( https://github.com/perexg/picoprobe-sump )
 
 Supported features:
     
@@ -59,3 +72,32 @@ Misc:
 
 [Link to protocol](https://www.sump.org/projects/analyzer/protocol) | 
 [Link to libsigrok](https://github.com/sigrokproject/libsigrok/tree/master/src/hardware/openbench-logic-sniffer)
+
+
+Logic Analyzer: sigrock
+=======================
+( https://github.com/gamblor21/rp2040-logic-analyzer )
+
+This project modified the PIO logic analyzer example that that was part of the 
+Raspberry Pi Pico examples. The example now allows interactive configuration 
+of the capture to perform and outputs the capture in CSV format suitable for
+importing into sigrock / Pulseview for further analysis.
+
+To use the analyzer install it on a Pico and connect to the COM port at 921600 
+baud. Once connected press h to get help of the commands. The capture is
+only limited by the abilities of the Pico.
+
+The commands are:
+  * p# - Set the first pin to receive capture data
+  * n# - Set how many pins to receive capture data
+  * f# - Set the freqency to capture data at in Hz
+  * t(1)(0) - Set the trigger to high or low. Trigger happens off first pin
+  * s# - Set how many samples to capture
+  * g - Go!
+
+Once "go" is selected the trigger will arm and wait for the specified signal.
+The output is a CSV file, each line contains every pin being sampled. The output
+can be saved with any program that can read a serial port to a file. Just be
+aware a large number of samples can take quite a while to transfer. The
+onboard LED will blink as the transfer is happening so you can know when to end
+the save.

@@ -24,7 +24,7 @@
  */
 
 #include "tusb.h"
-#include "get_serial.h"
+#include "pico_serialid.h"
 
 
 //--------------------------------------------------------------------+
@@ -42,11 +42,11 @@ tusb_desc_device_t const desc_device =
 
     .idVendor           = 0x2E8A, // Pi
 #if PICO_NO_FLASH
-    .idProduct          = 0xF005, // Picoprobe, dual uart, SUMP - debug
+    .idProduct          = 0xF005, // Picoprobe, quad bridge, APP - debug
 #else
-    .idProduct          = 0x0005, // Picoprobe, dual uart, SUMP
+    .idProduct          = 0x0005, // Picoprobe, quad bridge, APP
 #endif
-    .bcdDevice          = 0x0100, // Version 01.00
+    .bcdDevice          = 0x0001, // Version 00.01
     .iManufacturer      = 0x01,
     .iProduct           = 0x02,
     .iSerialNumber      = 0x03,
@@ -66,45 +66,56 @@ uint8_t const * tud_descriptor_device_cb(void)
 
 enum
 {
-  ITF_NUM_CDC_COM0,
-  ITF_NUM_CDC_DATA0,
-  ITF_NUM_CDC_COM1,
-  ITF_NUM_CDC_DATA1,
-  ITF_NUM_CDC_SUMP_COM,
-  ITF_NUM_CDC_SUMP_DATA,
-  ITF_NUM_PROBE,
-  ITF_NUM_TOTAL
+  ITFNUM_CDC0, ITFNUM_CDC0_DATA,
+  ITFNUM_CDC1, ITFNUM_CDC1_DATA,
+  ITFNUM_CDC2, ITFNUM_CDC2_DATA,
+  ITFNUM_CDC3, ITFNUM_CDC3_DATA,
+  ITFNUM_CDC4, ITFNUM_CDC4_DATA,
+  ITFNUM_CDC5, ITFNUM_CDC5_DATA,
+  ITFNUM_VENDOR,
+  ITFNUM_TOTAL
 };
 
-#define CDC_NOTIFICATION_EP_NUM0 0x81
-#define CDC_DATA0_OUT_EP_NUM 0x02
-#define CDC_DATA0_IN_EP_NUM 0x83
-#define CDC_NOTIFICATION_EP_NUM1 0x84
-#define CDC_DATA1_OUT_EP_NUM 0x05
-#define CDC_DATA1_IN_EP_NUM 0x86
-#define CDC_NOTIFICATION_EP_NUM2 0x87
-#define CDC_SUMP_OUT_EP_NUM 0x08
-#define CDC_SUMP_IN_EP_NUM 0x89
-#define PROBE_OUT_EP_NUM 0x0a
-#define PROBE_IN_EP_NUM 0x8b
+#define EPNUM_CDC0_CMD   0x81
+#define EPNUM_CDC0_DATA  0x82
+#define EPNUM_CDC1_CMD   0x83
+#define EPNUM_CDC1_DATA  0x84
+#define EPNUM_CDC2_CMD   0x85
+#define EPNUM_CDC2_DATA  0x86
+#define EPNUM_CDC3_CMD   0x87
+#define EPNUM_CDC3_DATA  0x88
+#define EPNUM_CDC4_CMD   0x89
+#define EPNUM_CDC4_DATA  0x8a
+#define EPNUM_CDC5_CMD   0x8b
+#define EPNUM_CDC5_DATA  0x8c
+#define EPNUM_VENDOR0_OUT  0x0d
+#define EPNUM_VENDOR0_IN 0x8e
 
-#define CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_CDC_DESC_LEN + TUD_CDC_DESC_LEN + TUD_VENDOR_DESC_LEN)
+#define CONFIG_TOTAL_LEN  ( (TUD_CONFIG_DESC_LEN) + \
+                                                (TUD_HID_DESC_LEN     * CFG_TUD_HID   ) + \
+                                                (TUD_CDC_DESC_LEN     * CFG_TUD_CDC   ) + \
+                                                (TUD_MSC_DESC_LEN     * CFG_TUD_MSC   ) + \
+                                                (TUD_MIDI_DESC_LEN     * CFG_TUD_MIDI ) + \
+                                                (TUD_VENDOR_DESC_LEN  * CFG_TUD_VENDOR) )
 
 uint8_t const desc_configuration[] =
 {
-  TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
-
-  // Interface 1 (uart0)
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_COM0, 0, CDC_NOTIFICATION_EP_NUM0, 64, CDC_DATA0_OUT_EP_NUM, CDC_DATA0_IN_EP_NUM, 64),
-
-  // Interface 2 (uart1)
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_COM1, 0, CDC_NOTIFICATION_EP_NUM1, 64, CDC_DATA1_OUT_EP_NUM, CDC_DATA1_IN_EP_NUM, 64),
-
-  // Interface 3 (SUMP)
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_SUMP_COM, 0, CDC_NOTIFICATION_EP_NUM2, 64, CDC_SUMP_OUT_EP_NUM, CDC_SUMP_IN_EP_NUM, 64),
-
-  // Interface 4 (picoprobe)
-  TUD_VENDOR_DESCRIPTOR(ITF_NUM_PROBE, 0, PROBE_OUT_EP_NUM, PROBE_IN_EP_NUM, 64)
+  // header
+  TUD_CONFIG_DESCRIPTOR(1, ITFNUM_TOTAL, 0, CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
+  // Interface 0 (console)
+  TUD_CDC_DESCRIPTOR(ITFNUM_CDC0, 0, EPNUM_CDC0_CMD, 64, EPNUM_CDC0_DATA & 0x7F, EPNUM_CDC0_DATA, 64),
+  // Interface 1 (bridge1)
+  TUD_CDC_DESCRIPTOR(ITFNUM_CDC1, 0, EPNUM_CDC1_CMD, 64, EPNUM_CDC1_DATA & 0x7F, EPNUM_CDC1_DATA, 64),
+  // Interface 2 (bridge2)
+  TUD_CDC_DESCRIPTOR(ITFNUM_CDC2, 0, EPNUM_CDC2_CMD, 64, EPNUM_CDC2_DATA & 0x7F, EPNUM_CDC2_DATA, 64),
+  // Interface 3 (bridge3)
+  TUD_CDC_DESCRIPTOR(ITFNUM_CDC3, 0, EPNUM_CDC3_CMD, 64, EPNUM_CDC3_DATA & 0x7F, EPNUM_CDC3_DATA, 64),
+  // Interface 4 (bridge4)
+  TUD_CDC_DESCRIPTOR(ITFNUM_CDC4, 0, EPNUM_CDC4_CMD, 64, EPNUM_CDC4_DATA & 0x7F, EPNUM_CDC4_DATA, 64),
+  // Interface 5 (serial data application)
+  TUD_CDC_DESCRIPTOR(ITFNUM_CDC5, 0, EPNUM_CDC5_CMD, 64, EPNUM_CDC5_DATA & 0x7F, EPNUM_CDC5_DATA, 64),
+  // Interface 6 (raw data application)
+  TUD_VENDOR_DESCRIPTOR(ITFNUM_VENDOR, 0, EPNUM_VENDOR0_OUT, EPNUM_VENDOR0_IN, 64)
 };
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR

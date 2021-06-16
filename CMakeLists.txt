@@ -1,39 +1,44 @@
 cmake_minimum_required(VERSION 3.12)
-
 include(pico_sdk_import.cmake)
-
-project(picoprobe)
-
+project(picogbox)
 pico_sdk_init()
-
-add_executable(picoprobe
-        src/led.c
-        src/main.c
-        src/usb_descriptors.c
-        src/probe.c
-        src/cdc_uart.c
-        src/cdc_sump.c
-        src/get_serial.c
-)
-
-if (DEFINED ENV{PICOPROBE_LED})
-        message("PICOPROBE_LED is defined as " $ENV{PICOPROBE_LED})
-        target_compile_definitions(picoprobe PRIVATE PICOPROBE_LED=$ENV{PICOPROBE_LED})
-endif()
-
-if (DEFINED ENV{TURBO_200MHZ})
-        message("TURBO_200MHZ is defined as " $ENV{TURBO_200MHZ})
-        target_compile_definitions(picoprobe PRIVATE TURBO_200MHZ=$ENV{TURBO_200MHZ})
-endif()
 
 set(DBG_PIN_COUNT=4)
 
-pico_generate_pio_header(picoprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe.pio)
+add_executable(picogbox
+        src/pico_led.c
+        src/pico_serialid.c
+        src/tusb_descriptors.c
+        src/bin_cdc_microshell.c
+        src/bin_cdc_bridge_uart.c
+        src/bin_cdc_sump.c
+        src/bin_cdc_sigrock.c
+        src/bin_vendor_swd.c
+        src/picogbox.c
+)
 
-target_include_directories(picoprobe PRIVATE src)
+if (DEFINED ENV{TURBO_200MHZ})
+        message("TURBO_200MHZ is defined as " $ENV{TURBO_200MHZ})
+        target_compile_definitions(picogbox PRIVATE TURBO_200MHZ=$ENV{TURBO_200MHZ})
+endif()
 
-target_link_libraries(picoprobe PRIVATE pico_stdlib pico_unique_id
-		      tinyusb_device tinyusb_board
-		      hardware_pio hardware_dma hardware_pwm)
+include(src/microshell/CMakeLists.txt)
+build_ush(ush)
 
-pico_add_extra_outputs(picoprobe)
+target_include_directories(picogbox PRIVATE 
+                        src
+                        )
+
+target_link_libraries(picogbox PRIVATE 
+                        pico_stdlib 
+                        pico_unique_id
+                        tinyusb_device 
+                        tinyusb_board 
+                        hardware_pio 
+                        hardware_dma 
+                        hardware_pwm
+                        ush
+                        )
+
+pico_generate_pio_header(picogbox ${CMAKE_CURRENT_LIST_DIR}/src/probe.pio)
+pico_add_extra_outputs(picogbox)

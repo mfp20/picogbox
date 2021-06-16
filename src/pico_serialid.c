@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
+ * Copyright (c) 2021 Federico Zuccardi Merli
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,51 +23,29 @@
  *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <stdint.h>
+#include "pico.h"
+#include "pico/unique_id.h"
+#include "pico_serialid.h"
 
-#include "bsp/board.h"
-#include "tusb.h"
+/* C string for iSerialNumber in USB Device Descriptor, two chars per byte + terminating NUL */
+char usb_serial[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1];
 
-#include "picoprobe_config.h"
-#if TURBO_200MHZ
-#include "pico/stdlib.h"
-#include "hardware/vreg.h"
-#endif
-#include "probe.h"
-#include "cdc_uart.h"
-#include "cdc_sump.h"
-#include "get_serial.h"
-#include "led.h"
+/* Why a uint8_t[8] array inside a struct instead of an uint64_t an inquiring mind might wonder */
+static pico_unique_board_id_t uID;
 
-// UART0 for Picoprobe debug
-// UART1 for picoprobe to target device
+void pico_serialid(void)
+{
+    pico_get_unique_board_id(&uID);
 
-int main(void) {
-
-#if TURBO_200MHZ
-    vreg_set_voltage(VREG_VOLTAGE_1_15);
-    set_sys_clock_khz(200000, true);
-#endif
-
-    board_init();
-    usb_serial_init();
-    cdc_uart_init();
-    cdc_sump_init();
-    tusb_init();
-    probe_init();
-    led_init();
-
-    picoprobe_info("Welcome to Picoprobe!\n");
-
-    while (1) {
-        tud_task(); // tinyusb device task
-        cdc_uart_task();
-        cdc_sump_task();
-        probe_task();
-        led_task();
+    for (int i = 0; i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2; i++)
+    {
+        /* Byte index inside the uid array */
+        int bi = i / 2;
+        /* Use high nibble first to keep memory order (just cosmetics) */
+        uint8_t nibble = (uID.id[bi] >> 4) & 0x0F;
+        uID.id[bi] <<= 4;
+        /* Binary to hex digit */
+        usb_serial[i] = nibble < 10 ? nibble + '0' : nibble + 'A' - 10;
     }
-
-    return 0;
 }

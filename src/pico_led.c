@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
+ * Copyright (c) 2021 a-pushkin on GitHub
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,37 @@
  *
  */
 
-#ifndef CDC_UART_H
-#define CDC_UART_H
+#include <pico/stdlib.h>
+#include <stdint.h>
 
-void cdc_uart_init(void);
-void cdc_uart_task(void);
-void cdc_uart_line_coding(cdc_line_coding_t const* line_coding);
+#include "config.h"
 
-#endif
+#define LED_COUNT_SHIFT 14
+#define LED_COUNT_MAX 5 * (1 << LED_COUNT_SHIFT)
+
+static uint32_t led_count;
+
+void led_init(void) {
+    led_count = 0;
+
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
+    gpio_put(LED_PIN, 1);
+}
+
+void led_task(void) {
+    if (led_count != 0) {
+        --led_count;
+        gpio_put(LED_PIN, !((led_count >> LED_COUNT_SHIFT) & 1));
+    }
+}
+
+void led_signal_activity(uint total_bits) {
+    if (led_count == 0) {
+        gpio_put(LED_PIN, 0);
+    }
+
+    if (led_count < LED_COUNT_MAX) {
+        led_count += total_bits;
+    }
+}
