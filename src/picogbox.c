@@ -5,9 +5,8 @@
 // USB CDC4 (bridge4: defaults to SPI master)
 // USB CDC5 (serial data application: defaults to SUMP)
 // USB VENDOR (raw data application: defaults to picoprobe)
-// UART0 for Picobox itself (ex: debug)
-// UART1 for target device
-
+// UART0 is stdio in debug build, available for target device in release build
+// UART1 available for target device
 
 #if TURBO_200MHZ
 #include <pico/stdlib.h>
@@ -15,9 +14,9 @@
 #endif
 #include <bsp/board.h>
 #include <tusb.h>
-#include <microshell.h>
 
 #include "config.h"
+#include "log.h"
 #include "pico_led.h"
 #include "pico_serialid.h"
 #include "bin_cdc_microshell.h"
@@ -30,6 +29,7 @@
 #include <stdio.h>
 #include <string.h>
 
+// global microshell object ptr
 ush_object_ptr_t ush;
 
 // base commands handlers
@@ -80,12 +80,14 @@ int main(void) {
     // hardware
     board_init();
     tusb_init();
-    pico_serialid();
-    led_init();
 
     // microshell
     ush = app_cdc_microshell_init();
     ush_commands_add(ush, &ush_node_base, ush_cmds_base, sizeof(ush_cmds_base) / sizeof(ush_cmds_base[0]));
+
+    // misc
+    serialid_init();
+    led_init();
 
     // default apps
     cdc_uart_init();

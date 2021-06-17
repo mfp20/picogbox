@@ -1,9 +1,8 @@
 
 #include "config.h"
+#include "log.h"
 #include "tusb.h"
-#include <microshell.h>
-
-#include "types.h"
+#include "bin_cdc_microshell.h"
 
 // working buffers allocations (size could be customized)
 #define BUF_IN_SIZE    32

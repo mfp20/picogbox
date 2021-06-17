@@ -12,6 +12,4 @@ typedef uint_fast16_t uint16;
 typedef uint_fast32_t uint32;
 typedef uint_fast64_t uint64;
 
-typedef struct ush_object* ush_object_ptr_t;
-
 #endif

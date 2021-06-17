@@ -31,10 +31,13 @@ extern "C" {
 
 #if defined(ARDUINO)
         #include "config/arduino/ush_config.h"
+#elif defined(PICO)
+        #include <assert.h>
+        #include "config/pico/ush_config.h"
 #elif defined(USH_CONFIG_PLATFORM_POSIX)
         #include "config/posix/ush_config.h"
 #else
-        #include "ush_config.h"
+        #error "Need to define a platform or write ush_config.h in [microshell]/src/config."
 #endif
 
 #ifdef __cplusplus

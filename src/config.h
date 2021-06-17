@@ -1,10 +1,15 @@
-#ifndef PICOGW_CONFIG_H_
-#define PICOGW_CONFIG_H_
-
-#include "types.h"
+#ifndef PICOGBOX_CONFIG_H_
+#define PICOGBOX_CONFIG_H_
 
 // LED config
 #define LED_PIN 25
+
+// log config
+#define LOG_ENABLE
+#define LOG_CONFIG_LEVEL 4
+#define LOG_CONFIG_COLOR
+#define LOG_CONFIG_TAGS
+#define LOG_CONFIG_NEWLINE
 
 // Console
 #define APP_CDC_MICROSHELL_INTF 0
@@ -34,27 +39,10 @@
 #define APP_VENDOR_SWD_PIN_SWDIO APP_VENDOR_SWD_PIN_OFFSET + 1 // 3
 #define APP_VENDOR_SWD_PIN_RESET 28
 
-// misc
-#if false
-#define picoprobe_info(format,args...) printf(format, ## args)
-#else
-#define picoprobe_info(format,...) ((void)0)
-#endif
-
-#if false
-#define picoprobe_debug(format,args...) printf(format, ## args)
-#else
-#define picoprobe_debug(format,...) ((void)0)
-#endif
-
-#if false
-#define picoprobe_dump(format,args...) printf(format, ## args)
-#else
-#define picoprobe_dump(format,...) ((void)0)
-#endif
-
 #if false
 #define TURBO_200MHZ 1
 #endif
+
+#include "types.h"
 
 #endif

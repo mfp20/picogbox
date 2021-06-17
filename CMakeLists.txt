@@ -2,10 +2,11 @@ cmake_minimum_required(VERSION 3.12)
 include(pico_sdk_import.cmake)
 project(picogbox)
 pico_sdk_init()
-
+add_definitions(-DPICO)
 set(DBG_PIN_COUNT=4)
 
 add_executable(picogbox
+        src/log.c
         src/pico_led.c
         src/pico_serialid.c
         src/tusb_descriptors.c
@@ -40,5 +41,5 @@ target_link_libraries(picogbox PRIVATE
                         ush
                         )
 
-pico_generate_pio_header(picogbox ${CMAKE_CURRENT_LIST_DIR}/src/probe.pio)
+pico_generate_pio_header(picogbox ${CMAKE_CURRENT_LIST_DIR}/src/bin_vendor_swd.pio)
 pico_add_extra_outputs(picogbox)

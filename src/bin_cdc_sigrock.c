@@ -4,12 +4,12 @@
  */
 
 #include "config.h"
+#include "bin_cdc_microshell.h"
 
 #include <pico/stdlib.h>
 #include <hardware/pio.h>
 #include <hardware/dma.h>
 #include <hardware/clocks.h>
-#include <microshell.h>
 
 #include <stdio.h>
 #include <string.h>

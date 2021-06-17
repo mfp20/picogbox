@@ -28,13 +28,13 @@
 #include "pico/unique_id.h"
 #include "pico_serialid.h"
 
-/* C string for iSerialNumber in USB Device Descriptor, two chars per byte + terminating NUL */
+// C string for iSerialNumber in USB Device Descriptor, two chars per byte + terminating NULL
 char usb_serial[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1];
 
-/* Why a uint8_t[8] array inside a struct instead of an uint64_t an inquiring mind might wonder */
+// Why a uint8_t[8] array inside a struct instead of an uint64_t an inquiring mind might wonder
 static pico_unique_board_id_t uID;
 
-void pico_serialid(void)
+void serialid_init(void)
 {
     pico_get_unique_board_id(&uID);
 

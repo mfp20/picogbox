@@ -1,11 +1,12 @@
 Pico Good Box
 =============
 
-This is a mashup of projects:
+This is a mashup of external projects:
 - [Microshell](https://github.com/marcinbor85/microshell)
 - [picoprobe](https://github.com/raspberrypi/picoprobe)
 - [SUMP logic analyzer](https://github.com/perexg/picoprobe-sump) + [random cdc_sump.h](https://github.com/PoroCYon/picoprobe-sump)
 - [Sigrock logic analyzer](https://github.com/gamblor21/rp2040-logic-analyzer)
+- [embedded-log](https://github.com/to9/embedded-log)
 
 Currently they barely stick together using some Superglue and Duck Tape. The Plan from main.cpp:
 
@@ -17,9 +18,19 @@ Currently they barely stick together using some Superglue and Duck Tape. The Pla
 // USB CDC4 (bridge4: defaults to SPI master)
 // USB CDC5 (serial data application: defaults to SUMP)
 // USB VENDOR (raw data application: defaults to picoprobe)
-// UART0 for Picobox itself (ex: debug)
-// UART1 for target device
+// UART0 is stdio in debug build, available for target device in release build
+// UART1 available for target device
 ```
+
+Microshell: command prompt
+==========================
+( https://github.com/marcinbor85/microshell )
+
+
+Picoprobe: SWD debugger for ARM
+===============================
+( https://github.com/raspberrypi/picoprobe )
+
 
 Logic Analyzer: SUMP protocol
 =============================

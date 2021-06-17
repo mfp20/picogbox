@@ -1,4 +1,5 @@
 #include "config.h"
+#include "log.h"
 #include "tusb.h"
 #include "bin_cdc_bridge_uart.h"
 
@@ -66,7 +67,7 @@ void cdc_uart_task(void) {
 }
 
 void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* line_coding) {
-    picoprobe_info("CDC %d: new baud rate %d\n", itf, line_coding->bit_rate);
+    LOG_INF("CDC %d: new baud rate %d\n", itf, line_coding->bit_rate);
     if (itf == APP_CDC_BRIDGE_UART0_INTF) {
         uart_init(APP_CDC_BRIDGE_UART0_INST, line_coding->bit_rate);
     } else if (itf == APP_CDC_BRIDGE_UART1_INTF) {
