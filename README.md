@@ -1,5 +1,5 @@
-Picobox
-=======
+Pico Good Box
+=============
 
 This is a mashup of projects:
 - [Microshell](https://github.com/marcinbor85/microshell)
@@ -9,6 +9,7 @@ This is a mashup of projects:
 
 Currently they barely stick together using some Superglue and Duck Tape. The Plan from main.cpp:
 
+```
 // USB CDC0 (user console)
 // USB CDC1 (bridge1: defaults to UART0)
 // USB CDC2 (bridge2: defaults to UART1)
@@ -18,7 +19,7 @@ Currently they barely stick together using some Superglue and Duck Tape. The Pla
 // USB VENDOR (raw data application: defaults to picoprobe)
 // UART0 for Picobox itself (ex: debug)
 // UART1 for target device
-
+```
 
 Logic Analyzer: SUMP protocol
 =============================
