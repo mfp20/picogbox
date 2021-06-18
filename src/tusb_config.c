@@ -26,6 +26,8 @@
 #include "tusb.h"
 #include "pico_serialid.h"
 
+#include <pico/stdio/driver.h>
+
 
 //--------------------------------------------------------------------+
 // Device Descriptors
@@ -150,15 +152,13 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
   uint8_t chr_count;
 
-  if ( index == 0)
-  {
+  if ( index == 0) {
     memcpy(&_desc_str[1], string_desc_arr[0], 2);
     chr_count = 1;
-  }else
-  {
+  } else {
     // Convert ASCII string into UTF-16
 
-    if ( !(index < sizeof(string_desc_arr)/sizeof(string_desc_arr[0])) ) return NULL;
+  if ( !(index < sizeof(string_desc_arr)/sizeof(string_desc_arr[0])) ) return NULL;
 
     const char* str = string_desc_arr[index];
 
@@ -177,3 +177,15 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
   return _desc_str;
 }
+
+static void stdio_usb_cdc0_out_chars(const char *buf, int len) {
+}
+static void stdio_usb_cdc0_out_flush(void) {
+}
+static int stdio_usb_cdc0_in_chars(char *buf, int len) {
+}
+stdio_driver_t stdio_usb_cdc0_driver = { 
+    .out_chars = stdio_usb_cdc0_out_chars,
+    .out_flush = stdio_usb_cdc0_out_flush,
+    .in_chars = stdio_usb_cdc0_in_chars,
+};

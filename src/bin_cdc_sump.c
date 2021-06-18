@@ -2,7 +2,7 @@
  * Protocol link: https://www.sump.org/projects/analyzer/protocol
  */
 
-#include "config.h"
+#include "picogbox.h"
 #include "log.h"
 #include "pico_led.h"
 #include "tusb.h"
@@ -17,7 +17,7 @@
 #include <hardware/structs/bus_ctrl.h>
 
 #if false
-#define sump_irq_debug(format,args...) LOG_DBG(format, ## args)
+#define sump_irq_debug(format,args...) LOG_DEB(format, ## args)
 #else
 #define sump_irq_debug(format,...) ((void)0)
 #endif
@@ -116,7 +116,7 @@ static struct _sump {
 #define AS_16P(a) (*(uint16_t *)(a))
 
 static void
-LOG_DBG_hexa(uint8_t *buf, uint32_t len)
+log_deb_hexa(uint8_t *buf, uint32_t len)
 {
     uint32_t l;
     for (l = 0; len > 0; len--, l++) {
@@ -217,8 +217,7 @@ sump_calc_sysclk_divider()
         v = 65535 * 256;
     else if (v <= 255)
         v = 256;
-    LOG_DBG("%s(): %u %u -> %u (%.4f)\n", __func__,
-                    clock_get_hz(clk_sys), sump.divider, v, (float)v / 256.0);
+    LOG_DEB("%u %u -> %u (%.4f)", clock_get_hz(clk_sys), sump.divider, v, (float)v / 256.0);
     return v;
 }
 
@@ -234,7 +233,7 @@ sump_pio_program(void)
         .length = count_of(prog),
         .origin = -1
     };
-    LOG_DBG("%s(): 0x%04x 0x%04x len=%u\n", __func__, prog[0], prog[1], program.length);
+    LOG_DEB("0x%04x 0x%04x len=%u", prog[0], prog[1], program.length);
     sump.pio_prog_offset = pio_add_program(SAMPLING_PIO, &program);
 }
 
@@ -258,8 +257,7 @@ sump_pio_init(void)
     sm_config_set_in_shift(&c, true, true, 32);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
     pio_sm_init(SAMPLING_PIO, SAMPLING_PIO_SM, off, &c);
-    LOG_DBG("%s(): pc=0x%02x [0x%02x], gpio=%u\n", __func__,
-                    off, sump.pio_prog_offset, gpio);
+    LOG_DEB("pc=0x%02x [0x%02x], gpio=%u", off, sump.pio_prog_offset, gpio);
 }
 
 static uint32_t
@@ -289,8 +287,8 @@ sump_pwm_slice_init(uint gpio, uint clock, bool swap_levels)
         level_b = tmp;
     }
     pwm_set_both_levels(slice, level_a, level_b);
-    LOG_DBG("%s(): gpio=%u clkdiv=%u top=%u level=%u/%u freq=%.4fMhz (req %.4fMhz)\n",
-                    __func__, gpio, clkdiv, top, level_a, level_b,
+    LOG_DEB("gpio=%u clkdiv=%u top=%u level=%u/%u freq=%.4fMhz (req %.4fMhz)",
+                    gpio, clkdiv, top, level_a, level_b,
                     (float)clksys / (float)clkdiv / (float)top / 1000000.0,
                     (float)clock / 1000000.0);
     return 1u << slice;
@@ -316,8 +314,8 @@ sump_calib_init(void)
     pwm_config_set_clkdiv_int(&c, clkdiv);
     pwm_init(slice, &c, false);
     pwm_set_both_levels(slice, level_a, level_a);
-    LOG_DBG("%s(): gpio=%u clkdiv=%u top=%u level=%u/%u freq=%.4fMhz (req %.4fMhz)\n",
-                    __func__, APP_CDC_SUMP_PIN_SAMPLING_TEST, clkdiv, top, level_a, level_a,
+    LOG_DEB("gpio=%u clkdiv=%u top=%u level=%u/%u freq=%.4fMhz (req %.4fMhz)",
+                    APP_CDC_SUMP_PIN_SAMPLING_TEST, clkdiv, top, level_a, level_a,
                     (float)clksys / (float)clkdiv / (float)top / 1000000.0,
                     (float)clock / 1000000.0);
     return 1u << slice;
@@ -373,7 +371,7 @@ sump_set_chunk_size(void)
         sump.chunk_size *= 2;
         clk_hz /= 2;
     }
-    LOG_DBG("%s(): 0x%04x\n", __func__, sump.chunk_size);
+    LOG_DEB("0x%04x", sump.chunk_size);
 }
 
 static void
@@ -390,7 +388,7 @@ sump_dma_program(uint ch, uint32_t pos)
                           &SAMPLING_PIO->rxf[SAMPLING_PIO_SM],
                           sump.chunk_size / sump.width,
                           false);
-    LOG_DBG("%s() %u: w=0x%08x r=0x%08x t=0x%08x -> %u\n", __func__,
+    LOG_DEB("%u: w=0x%08x r=0x%08x t=0x%08x -> %u",
                     SUMP_DMA_CH_FIRST + ch,
                     sump.buffer + pos,
                     &SAMPLING_PIO->rxf[SAMPLING_PIO_SM],
@@ -408,7 +406,7 @@ sump_dma_init(uint8_t state)
     sump.dma_pos = 0;
     sump.dma_curr_idx = 0;
 
-    LOG_DBG("%s(): read=0x%08x delay=0x%08x divider=%u\n", __func__,
+    LOG_DEB("read=0x%08x delay=0x%08x divider=%u",
                     sump.read_count, sump.delay_count, sump.divider);
 
     count = sump.read_count;
@@ -422,7 +420,7 @@ sump_dma_init(uint8_t state)
     sump.next_count *= sump.width;
     sump.read_start = 0;
 
-    LOG_DBG("%s(): buffer = 0x%08x, dma_count=0x%08x next_count=0x%08x\n", __func__,
+    LOG_DEB("buffer = 0x%08x, dma_count=0x%08x next_count=0x%08x",
                     sump.buffer, sump.dma_count, sump.next_count);
 
     sump_pio_init();
@@ -520,7 +518,7 @@ sump_dma_done(void)
     pio_sm_set_enabled(SAMPLING_PIO, SAMPLING_PIO_SM, false);
     irq_set_enabled(SAMPLING_DMA_IRQ, false);
     us = time_us_64() - sump.timestamp_start;
-    LOG_DBG("%s(): sampling time = %llu.%llu\n", __func__, us / 1000000ull, us % 1000000ull);
+    LOG_DEB("sampling time = %llu.%llu", us / 1000000ull, us % 1000000ull);
     sump.state = SUMP_STATE_DUMP;
 }
 
@@ -586,7 +584,7 @@ __retry:
     // reprogram the current DMA channel to the tail
     mask = SUMP_DMA_CHANNELS * sump.chunk_size;
     dma_channel_set_write_addr(ch, sump.buffer + (sump.dma_pos + mask) % SUMP_MEMORY_SIZE, false);
-    sump_irq_debug("%s(): %u: w=0x%08x, state=%u\n", __func__, ch, sump.buffer + (sump.dma_pos + mask) % SUMP_MEMORY_SIZE, sump.state);
+    sump_irq_debug("%u: w=0x%08x, state=%u\n", ch, sump.buffer + (sump.dma_pos + mask) % SUMP_MEMORY_SIZE, sump.state);
 
     if (sump.next_count <= sump.chunk_size) {
 	sump.next_count = sump_dma_next(sump.dma_pos);
@@ -595,7 +593,7 @@ __retry:
     } else {
 	sump.next_count -= sump.chunk_size;
     }
-    sump_irq_debug("%s(): next=0x%x\n", __func__, sump.next_count);
+    sump_irq_debug("next=0x%x\n", sump.next_count);
 
     sump.dma_curr_idx = (sump.dma_curr_idx + 1) % SUMP_DMA_CHANNELS;
     sump.dma_pos += sump.chunk_size;
@@ -614,13 +612,13 @@ __retry:
             ch = (mask + sump.dma_curr_idx) % SUMP_DMA_CHANNELS;
             dma_channel_set_trans_count(ch + SUMP_DMA_CH_FIRST, (sump.next_count % sump.chunk_size) / sump.width, false);
         }
-        sump_irq_debug("%s(): %u: t=0x%08x\n", __func__, ch + SUMP_DMA_CH_FIRST, (sump.next_count % sump.chunk_size) / sump.width);
+        sump_irq_debug("%u: t=0x%08x\n", ch + SUMP_DMA_CH_FIRST, (sump.next_count % sump.chunk_size) / sump.width);
         // break chain, reset unused DMA chunks
         // clear all chains for high-speed DMAs
         mask = SUMP_DMA_CHANNELS - ((sump.next_count + sump.chunk_size - 1) / sump.chunk_size);
         while (mask > 0) {
             sump_dma_chain_to_self(ch);
-            sump_irq_debug("%s(): %u -> %u\n", __func__, ch + SUMP_DMA_CH_FIRST, ch + SUMP_DMA_CH_FIRST);
+            sump_irq_debug("%u -> %u\n", ch + SUMP_DMA_CH_FIRST, ch + SUMP_DMA_CH_FIRST);
             ch = (ch + 1) % SUMP_DMA_CHANNELS;
             mask--;
         }
@@ -722,7 +720,7 @@ sump_set_flags(uint32_t flags)
 	width = 0;
     if ((flags & SUMP_FLAG1_GR3_DISABLE) == 0)
 	width = 0;
-    LOG_DBG("%s(): sample %u bytes\n", __func__, width);
+    LOG_DEB("sample %u bytes", width);
     sump.width = width;
 }
 
@@ -755,7 +753,7 @@ sump_set_trigger_mask(uint trig, uint32_t val)
 {
     struct _trigger *t = &sump.trigger[trig];
     t->mask = val;
-    LOG_DBG("%s(): idx=%u val=0x%08x\n", __func__, trig, val);
+    LOG_DEB("idx=%u val=0x%08x", trig, val);
 }
 
 static void
@@ -763,7 +761,7 @@ sump_set_trigger_value(uint trig, uint32_t val)
 {
     struct _trigger *t = &sump.trigger[trig];
     t->value = val;
-    LOG_DBG("%s(): idx=%u val=0x%08x\n", __func__, trig, val);
+    LOG_DEB("idx=%u val=0x%08x", trig, val);
 }
 
 static void
@@ -775,14 +773,13 @@ sump_set_trigger_config(uint trig, uint32_t val)
     t->channel = ((val >> 20) & 0x0f) | ((val >> (24 - 4)) & 0x10);
     t->level = (val >> 16) & 3;
     t->delay = val & 0xffff;
-    LOG_DBG("%s(): idx=%u val=0x%08x (start=%u serial=%u channel=%u level=%u delay=%u)\n",
-                    __func__, trig, val, t->start, t->serial, t->channel, t->level, t->delay);
+    LOG_DEB("idx=%u val=0x%08x (start=%u serial=%u channel=%u level=%u delay=%u)", trig, val, t->start, t->serial, t->channel, t->level, t->delay);
 }
 
 static void
 sump_rx_short(uint8_t cmd)
 {
-    LOG_DBG("%s(): 0x%02x\n", __func__, cmd);
+    LOG_DEB("0x%02x", cmd);
     switch (cmd) {
     case SUMP_CMD_RESET:
 	sump_do_reset();
@@ -815,7 +812,7 @@ sump_rx_long(uint8_t * cmd)
     uint32_t val;
 
     val = cmd[1] | (cmd[2] << 8) | (cmd[3] << 16) | (cmd[4] << 24);
-    LOG_DBG("%s(): [0x%02x] 0x%08x\n", __func__, cmd[0], val);
+    LOG_DEB("[0x%02x] 0x%08x", cmd[0], val);
     switch (cmd[0]) {
     case SUMP_CMD_SET_SAMPLE_RATE:
 	sump_do_stop();
@@ -863,11 +860,6 @@ sump_rx(uint8_t *buf, uint count)
 {
     if (count == 0)
 	return;
-#if false
-    LOG_DBG("%s(): ", __func__);
-    LOG_DBG_hexa(buf, count);
-    LOG_DBG("\n");
-#endif
     while (count-- > 0) {
         sump.cmd[sump.cmd_pos++] = *buf++;
         if (SUMP_CMD_IS_SHORT(sump.cmd[0])) {
@@ -887,7 +879,6 @@ sump_tx_empty(uint8_t *buf, uint len)
     uint8_t a, b;
 
     count = sump.read_count;
-    //LOG_DBG("%s: count=%u\n", __func__, count);
     a = 0x55;
     if (sump.flags & SUMP_FLAG1_ENABLE_RLE) {
         count += count & 1; // align up
@@ -934,7 +925,6 @@ sump_tx_empty(uint8_t *buf, uint len)
             return 0;
         }
     }
-    //LOG_DBG("%s: ret=%u\n", __func__, i);
     return i;
 }
 
@@ -945,7 +935,6 @@ sump_tx8(uint8_t *buf, uint len)
     uint8_t *ptr;
 
     count = sump.read_count;
-    //LOG_DBG("%s: count=%u, start=%u\n", __func__, count);
     ptr = sump.buffer + (sump.read_start + count) % SUMP_MEMORY_SIZE;
     if (sump.flags & SUMP_FLAG1_ENABLE_RLE) {
         uint8_t b, rle_last = 0x80, rle_count = 0;
@@ -980,7 +969,6 @@ sump_tx8(uint8_t *buf, uint len)
         }
         sump.read_count -= i;
     }
-    //LOG_DBG("%s: ret=%u\n", __func__, i);
     return i;
 }
 
@@ -991,7 +979,6 @@ sump_tx16(uint8_t *buf, uint len)
     volatile uint8_t *ptr;
 
     count = sump.read_count;
-    //LOG_DBG("%s: count=%u, start=%u\n", __func__, count, sump.read_count);
     ptr = sump.buffer + (sump.read_start + count * 2) % SUMP_MEMORY_SIZE;
     if (sump.flags & SUMP_FLAG1_ENABLE_RLE) {
         uint16_t b, rle_last = 0x8000, rle_count = 0;
@@ -1029,7 +1016,6 @@ sump_tx16(uint8_t *buf, uint len)
         }
         sump.read_count -= i / 2;
     }
-    //LOG_DBG("%s: ret=%u\n", __func__, i);
     return i;
 }
 
@@ -1074,7 +1060,7 @@ cdc_sump_init_connect(void)
     sump.read_count = 256;
     sump.delay_count = 256;
 
-    LOG_DBG("%s(): memory buffer %u bytes\n", __func__, SUMP_MEMORY_SIZE);
+    LOG_DEB("memory buffer %u bytes", SUMP_MEMORY_SIZE);
 }
 
 void
@@ -1111,8 +1097,6 @@ cdc_sump_init(void)
     sump_dma_set_irq_channel_mask_enabled(SUMP_DMA_MASK, true);
 
     cdc_sump_init_connect();
-
-    LOG_DBG("%s()\n", __func__);
 }
 
 #define MAX_UART_PKT 64

@@ -3,7 +3,7 @@
  * - modified by Mark Komus 2021: captures data and outputs to a CSV sigrok/pulseview format
  */
 
-#include "config.h"
+#include "picogbox.h"
 #include "bin_cdc_microshell.h"
 
 #include <pico/stdlib.h>
@@ -103,6 +103,7 @@ void print_capture_buf_csv(const uint32_t *buf, uint pin_base, uint pin_count, u
     }
 }
 
+// app sigrock folder
 static void ush_handler_exec_pin(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
     // TODO
     int pin = -1;
@@ -118,9 +119,8 @@ static void ush_handler_exec_pin(struct ush_object *self, struct ush_file_descri
         printf("Start pin is %d\n", pin);
         CAPTURE_PIN_BASE = pin;
     }
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
 }
-
-
 static void ush_handler_exec_num(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
     // TODO
     int number = -1;
@@ -136,8 +136,8 @@ static void ush_handler_exec_num(struct ush_object *self, struct ush_file_descri
         printf("Total pins is %d\n", number);
         CAPTURE_PIN_COUNT = number;
     }
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
 }
-
 static void ush_handler_exec_freq(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
     // TODO
     uint freq = 0;
@@ -154,8 +154,8 @@ static void ush_handler_exec_freq(struct ush_object *self, struct ush_file_descr
         FREQ_DIV = clock_get_hz(clk_sys) / (float)FREQUENCY;
         printf("Frequency is %d div is %f\n", FREQUENCY, FREQ_DIV);
     }
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
 }
-
 static void ush_handler_exec_trigger(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
     // TODO
     int t = -1;
@@ -170,8 +170,8 @@ static void ush_handler_exec_trigger(struct ush_object *self, struct ush_file_de
         TRIGGER = t;
         printf("Trigger set to %d\n", TRIGGER);
     }
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
 }
-
 static void ush_handler_exec_samples(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
     // TODO
     int number = -1;
@@ -187,13 +187,12 @@ static void ush_handler_exec_samples(struct ush_object *self, struct ush_file_de
         printf("Sample number is %d\n", number);
         CAPTURE_N_SAMPLES = number;
     }
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
 }
-
 static void ush_handler_exec_go(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
     // TODO
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
 }
-
-// files descriptor and node
 static const struct ush_file_descriptor ush_files_sigrock[] = {
     {
         .name = "p",
@@ -233,10 +232,11 @@ static const struct ush_file_descriptor ush_files_sigrock[] = {
     },
 };
 
+// sigrock command
 static void ush_handler_exec_sigrock(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
     // TODO
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
 }
-
 static const struct ush_file_descriptor ush_cmds_sigrock[] = {
     {
         .name = "sigrock",
@@ -245,7 +245,6 @@ static const struct ush_file_descriptor ush_cmds_sigrock[] = {
         .exec = ush_handler_exec_sigrock,
     },
 };
-
 static struct ush_node_object ush_node_sigrock_files, ush_node_sigrock_cmds;
 
 void cdc_sigrock_init(void) {

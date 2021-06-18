@@ -1,219 +1,193 @@
-/*************************************************************************************
-** 
-** Copyright (c) 2017 G.D gaodongzi@126.com
-** Contact: https://github.com/to9
-** 
-** This file is part of the log library.
-**
-** MIT License
-** Permission is hereby granted, free of charge, to any person obtaining a copy
-** of this software and associated documentation files (the "Software"), to deal
-** in the Software without restriction, including without limitation the rights
-** to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-** copies of the Software, and to permit persons to whom the Software is
-** furnished to do so, subject to the following conditions:
-** 
-** The above copyright notice and this permission notice shall be included in all
-** copies or substantial portions of the Software.
-** 
-** THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-** IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-** FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-** AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-** LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-** SOFTWARE.
-** 
-** 
-*************************************************************************************/
-
 #ifndef LOG_H
 #define LOG_H
 
-#include "config.h"
+#include "picogbox.h"
 
-#ifdef __cplusplus
-extern "C" {
+#include <stdio.h>
+#include <errno.h>
+
+#ifndef LOG_LEVEL
+#define LOG_LEVEL (7)
 #endif
 
-#define LOG_VERSION "1.0.0"
-
-#define LOG_LEVEL_ASSERT 		0
-#define LOG_LEVEL_ERROR 		1
-#define LOG_LEVEL_WARNING 		2
-#define LOG_LEVEL_INFO 			3
-#define LOG_LEVEL_DEBUG 		4
-
-#if !defined(LOG_CONFIG_LEVEL)
-#define LOG_LEVEL LOG_LEVEL_DEBUG
-#else
-#define LOG_LEVEL LOG_CONFIG_LEVEL
+#ifndef LOG_COLOR
+#define LOG_COLOR (0)
 #endif
 
+// log levels the same as syslog
+#define EMERG (0)
+#define ALERT (1)
+#define CRIT (2)
+#define ERR (3)
+#define WARNING (4)
+#define NOTICE (5)
+#define INFO (6)
+#define DEBUG (7)
 
-#if defined(LOG_ENABLE)
-extern int printk(const char *format, ...);
-extern void (*log_hook)(const char *str);
-extern void log_init(char *buff, unsigned int buff_len, void (*hook)(const char *));
-extern int printk_hex(unsigned char *buff, unsigned int count);
+// colors
+#define NONE                 "\e[0m"
+#define BLACK                "\e[0;30m"
+#define L_BLACK              "\e[1;30m"
+#define RED                  "\e[0;31m"
+#define L_RED                "\e[1;31m"
+#define GREEN                "\e[0;32m"
+#define L_GREEN              "\e[1;32m"
+#define BROWN                "\e[0;33m"
+#define YELLOW               "\e[1;33m"
+#define BLUE                 "\e[0;34m"
+#define L_BLUE               "\e[1;34m"
+#define PURPLE               "\e[0;35m"
+#define L_PURPLE             "\e[1;35m"
+#define CYAN                 "\e[0;36m"
+#define L_CYAN               "\e[1;36m"
+#define GRAY                 "\e[0;37m"
+#define WHITE                "\e[1;37m"
 
-#define LOG_COLOR_NONE    		""
-#define LOG_COLOR_OFF     		"\x1B[0m"
-#define LOG_COLOR_RED     		"\x1B[0;31m"
-#define LOG_COLOR_LIGHT_RED     "\x1B[1;31m"
-#define LOG_COLOR_GREEB     	"\x1B[0;32m"
-#define LOG_COLOR_LIGHT_GREEN   "\x1B[1;32m"
-#define LOG_COLOR_YELLOW  		"\x1B[0;33m"
-#define LOG_COLOR_LIGHT_YELLOW  "\x1B[1;33m"
-#define LOG_COLOR_BLUE  		"\x1B[0;34m"
-#define LOG_COLOR_LIGHT_BLUE  	"\x1B[1;34m"
-#define LOG_COLOR_MAGENTA  		"\x1B[0;35m"
-#define LOG_COLOR_LIGHT_MAGENTA	"\x1B[1;35m"
-#define LOG_COLOR_CYAN  		"\x1B[0;36m"
-#define LOG_COLOR_LIGHT_CYAN	"\x1B[1;36m"
+#define BOLD                 "\e[1m"
+#define UNDERLINE            "\e[4m"
+#define BLINK                "\e[5m"
+#define REVERSE              "\e[7m"
+#define HIDE                 "\e[8m"
+#define CLEAR                "\e[2J"
+#define CLRLINE              "\r\e[K" //or "\e[1K\r"
 
-#if defined(LOG_CONFIG_TAGS)
-#define LOG_TAG_ASS				"[ASS] "
-#define LOG_TAG_ERR 			"[ERR] "
-#define LOG_TAG_WRN 			"[WRN] "
-#define LOG_TAG_INF 			"[INF] "
-#define LOG_TAG_DBG 			"[DBG] "
-#else
-#define LOG_TAG_ASS 			""
-#define LOG_TAG_ERR 			""
-#define LOG_TAG_WRN 			""
-#define LOG_TAG_INF 			""
-#define LOG_TAG_DBG 			""
-#endif
-
-
-#if !defined(LOG_CONFIG_ASS_COLOR)
-#define LOG_TAG_ASS_COLOR			LOG_COLOR_LIGHT_MAGENTA
-#else
-#define LOG_TAG_ASS_COLOR			LOG_CONFIG_ASS_COLOR
-#endif
-
-#if !defined(LOG_CONFIG_ERR_COLOR)
-#define LOG_TAG_ERR_COLOR			LOG_COLOR_LIGHT_RED
-#else
-#define LOG_TAG_ERR_COLOR			LOG_CONFIG_ERR_COLOR
-#endif
-
-#if !defined(LOG_CONFIG_WRN_COLOR)
-#define LOG_TAG_WRN_COLOR			LOG_COLOR_LIGHT_YELLOW
-#else
-#define LOG_TAG_WRN_COLOR			LOG_CONFIG_WRN_COLOR
-#endif
-
-#if !defined(LOG_CONFIG_INF_COLOR)
-#define LOG_TAG_INF_COLOR			LOG_COLOR_LIGHT_BLUE
-#else
-#define LOG_TAG_INF_COLOR			LOG_CONFIG_INF_COLOR
-#endif
-
-#if !defined(LOG_CONFIG_DBG_COLOR)
-#define LOG_TAG_DBG_COLOR			LOG_COLOR_LIGHT_GREEN
-#else
-#define LOG_TAG_DBG_COLOR			LOG_COLOR_LIGHT_COLOR
-#endif
-
-#if !defined(LOG_CONFIG_DBG_HEX_COLOR)
-#define LOG_TAG_DBG_HEX_COLOR		LOG_COLOR_NONE
-#else
-#define LOG_TAG_DBG_HEX_COLOR		LOG_COLOR_DBG_HEX_COLOR
-#endif
-
-
-#if !defined(LOG_CONFIG_NEWLINE)
-#define LOG_NEWLINE ""
-#else
-#define LOG_NEWLINE "\n"
-#endif
-
-#if defined(LOG_CONFIG_COLOR)
-#define LOG_CALL_TPYE(tag, tag_color, format, ...)	\
-	printk("%s%s%s(%d): " format "%s" LOG_NEWLINE,	\
-	       tag_color, tag, __FILE__, __LINE__, ##__VA_ARGS__, LOG_COLOR_OFF)
-
-#define LOG_CALL_TPYE0(color) printk("%s" color)
-#else
-#define LOG_CALL_TPYE(tag, tag_color, format, ...)	\
-	printk("%s%s%s(%d): " format "%s" LOG_NEWLINE,	\
-	       LOG_COLOR_NONE, tag, __FILE__, __LINE__, ##__VA_ARGS__, LOG_COLOR_NONE)
-
-#define LOG_CALL_TPYE0(color) { ; }
-#endif
-
-
-#define LOG_COLOR(tag, tag_color, format, ...) LOG_CALL_TPYE(tag, tag_color, format, ##__VA_ARGS__)
-
-#if (LOG_LEVEL >= LOG_LEVEL_ASSERT)
-#define LOG_ASS(EX) \
-	if(!(EX)) \
-	{ \
-		LOG_COLOR(LOG_TAG_ASS, LOG_TAG_ASS_COLOR, "assert: '" #EX "' failed"); \
-	}
-#endif
-
-#if (LOG_LEVEL >= LOG_LEVEL_ERROR)
-#define LOG_ERR(format, ...) LOG_COLOR(LOG_TAG_ERR, LOG_TAG_ERR_COLOR, format, ##__VA_ARGS__)
-#endif
-
-#if (LOG_LEVEL >= LOG_LEVEL_WARNING)
-#define LOG_WRN(format, ...) LOG_COLOR(LOG_TAG_WRN,	LOG_TAG_WRN_COLOR, format, ##__VA_ARGS__)
-#endif
-
-#if (LOG_LEVEL >= LOG_LEVEL_INFO)
-#define LOG_INF(format, ...) LOG_COLOR(LOG_TAG_INF,	LOG_TAG_INF_COLOR, format, ##__VA_ARGS__)
-#endif
-
-#if (LOG_LEVEL >= LOG_LEVEL_DEBUG)
-#define LOG_DBG(format, ...) LOG_COLOR(LOG_TAG_DBG,	LOG_TAG_DBG_COLOR, format, ##__VA_ARGS__)
-
-#define LOG_DBG_HEX(format, buff, len) { \
-		LOG_COLOR(LOG_TAG_DBG, LOG_TAG_DBG_HEX_COLOR, "%s", format); \
-		printk_hex(buff, len); \
-	}
-#endif
-
-#else
-#define printk(...) ((void)0)
-#define log_init(...) ((void)0)
-#endif
-
-
-#if !defined(LOG_ASS)
-#define LOG_ASS(format, ...) ((void)0)
-#endif
-
-#if !defined(LOG_ERR)
-#define LOG_ERR(format, ...) ((void)0)
-#endif
-
-#if !defined(LOG_WRN)
-#define LOG_WRN(format, ...) ((void)0)
-#endif
-
-#if !defined(LOG_INF)
-#define LOG_INF(format, ...) ((void)0)
-#endif
-
-#if !defined(LOG_DBG)
-#define LOG_DBG(format, ...) ((void)0)
-#define LOG_DBG_HEX(format, buff, len) ((void)0)
-#endif
-
-// TODO 
 #if false
-#define log_dump(format,args...) printf(format, ## args)
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #else
-#define log_dump(format,...) ((void)0)
+#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 #endif
 
+/* safe readable version of errno */
+#define clean_errno() (errno == 0 ? "None" : strerror(errno))
 
-#ifdef __cplusplus
-}
+#ifdef BUILD_DEBUG
+#define LOG_CONTENT_FORMAT YELLOW "(errno: %s) " NONE " %s:%d:%s()\t"
+#define LOG_CONTENT_VARS clean_errno(), __FILENAME__, __LINE__, __func__
+#else
+#define LOG_CONTENT_FORMAT YELLOW " (errno: %s) " NONE " %s() "
+#define LOG_CONTENT_VARS clean_errno(), __func__
 #endif
 
-#endif//LOG_H
+// composers without \n
+#define LOG_EME_NON(M, ...)	printf("%010ld " RED    "[EMERG]   " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_ALE_NON(M, ...)	printf("%010ld " PURPLE "[ALERT]   " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_CRI_NON(M, ...)	printf("%010ld " YELLOW "[CRIT]    " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_ERR_NON(M, ...)	printf("%010ld " BROWN  "[ERR]     " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_WAR_NON(M, ...)	printf("%010ld " GREEN  "[WARNING] " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_NOT_NON(M, ...)	printf("%010ld " L_BLUE "[NOTICE]  " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_INF_NON(M, ...)	printf("%010ld " CYAN   "[INFO]    " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_DEB_NON(M, ...)	printf("%010ld " GRAY   "[DEBUG]   " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+int printk_hex(unsigned char *buff, unsigned int count, char *str_val);
+#define LOG_HEX_NON(D, N, M, ...) { \
+                            char str_val[N*5]; \
+                            printk_hex(D, N, str_val); \
+                            printf("%010ld " "[DEBUG]   " "%s" M "\n", monotonic32(), str_val, ##__VA_ARGS__); \
+                        }
+
+// add \n
+#define LOG_EME(M, ...) LOG_EME_NON(M, ##__VA_ARGS__); printf("\n");
+#define LOG_ALE(M, ...) LOG_ALE_NON(M, ##__VA_ARGS__); printf("\n");
+#define LOG_CRI(M, ...) LOG_CRI_NON(M, ##__VA_ARGS__); printf("\n");
+#define LOG_ERR(M, ...) LOG_ERR_NON(M, ##__VA_ARGS__); printf("\n");
+#define LOG_WAR(M, ...) LOG_WAR_NON(M, ##__VA_ARGS__); printf("\n");
+#define LOG_NOT(M, ...) LOG_NOT_NON(M, ##__VA_ARGS__); printf("\n");
+#define LOG_INF(M, ...) LOG_INF_NON(M, ##__VA_ARGS__); printf("\n");
+#define LOG_DEB(M, ...) LOG_DEB_NON(M, ##__VA_ARGS__); printf("\n");
+#define LOG_HEX(D, N, M, ...) LOG_HEX_NON(D, N, M, ##__VA_ARGS__); printf("\n");
+
+
+// undefine levels according to configuration
+#if LOG_LEVEL < DEBUG
+#undef LOG_DEB_NON
+#define LOG_DEB_NON(M, ...) ((void)0)
+#undef LOG_DEB
+#define LOG_DEB(M, ...) ((void)0)
+#undef LOG_HEX_NON
+#define LOG_HEX_NON(D, N, M, ...) ((void)0)
+#undef LOG_HEX
+#define LOG_HEX(D, N, M, ...) ((void)0)
+#endif
+
+#if LOG_LEVEL < INFO
+#undef LOG_INF_NON
+#define LOG_INF_NON(M, ...) ((void)0)
+#undef LOG_INF
+#define LOG_INF(M, ...) ((void)0)
+#endif
+
+#if LOG_LEVEL < NOTICE
+#undef LOG_NOT_NON
+#define LOG_NOT_NON(M, ...) { ; }
+#undef LOG_NOT
+#define LOG_NOT(M, ...) { ; }
+#endif
+
+#if LOG_LEVEL < WARNING
+#undef LOG_WARING_NON
+#define LOG_WARING_NON(M, ...) { ; }
+#undef LOG_WARING
+#define LOG_WARING(M, ...) { ; }
+#endif
+
+#if LOG_LEVEL < ERR
+#undef LOG_ERR_NON
+#define LOG_ERR_NON(M, ...) { ; }
+#undef LOG_ERR
+#define LOG_ERR(M, ...) { ; }
+#endif
+
+#if LOG_LEVEL < CRIT
+#undef LOG_CRI_NON
+#define LOG_CRI_NON(M, ...) { ; }
+#undef LOG_CRI
+#define LOG_CRI(M, ...) { ; }
+#endif
+
+#if LOG_LEVEL < ALERT
+#undef LOG_ALE_NON
+#define LOG_ALE_NON(M, ...) { ; }
+#undef LOG_ALE
+#define LOG_ALE(M, ...) { ; }
+#endif
+
+#if LOG_LEVEL < EMERG
+#undef LOG_EME_NON
+#define LOG_EME_NON(M, ...) { ; }
+#undef LOG_EME
+#define LOG_EME(M, ...) { ; }
+#endif
+
+// undefine colors according to configuration
+#if LOG_COLOR < 1
+
+#undef NONE
+#define NONE
+
+#undef RED
+#define RED
+
+#undef PURPLE
+#define PURPLE
+
+#undef YELLOW
+#define YELLOW
+
+#undef BROWN
+#define BROWN
+
+#undef GREEN
+#define GREEN
+
+#undef CYAN
+#define CYAN
+
+#undef BLUE
+#define BLUE
+
+#undef GRAY
+#define GRAY
+
+#endif
+
+#endif
 

@@ -26,7 +26,7 @@
 #include <pico/stdlib.h>
 #include <stdint.h>
 
-#include "config.h"
+#include "picogbox.h"
 
 #define LED_COUNT_SHIFT 14
 #define LED_COUNT_MAX 5 * (1 << LED_COUNT_SHIFT)

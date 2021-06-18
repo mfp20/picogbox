@@ -1,9 +1,12 @@
-#include "config.h"
+#include "picogbox.h"
 #include "log.h"
 #include "tusb.h"
 #include "bin_cdc_bridge_uart.h"
 
 #include <pico/stdlib.h>
+//#include <pico/stdio.h>
+//#include <pico/stdio_uart.h>
+#include <pico/stdio/driver.h>
 
 //APP_CDC_BRIDGE_UART0_INTF
 //APP_CDC_BRIDGE_UART1_INTF
@@ -67,7 +70,7 @@ void cdc_uart_task(void) {
 }
 
 void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* line_coding) {
-    LOG_INF("CDC %d: new baud rate %d\n", itf, line_coding->bit_rate);
+    LOG_INF("CDC %d: new baud rate %d", itf, line_coding->bit_rate);
     if (itf == APP_CDC_BRIDGE_UART0_INTF) {
         uart_init(APP_CDC_BRIDGE_UART0_INST, line_coding->bit_rate);
     } else if (itf == APP_CDC_BRIDGE_UART1_INTF) {
@@ -75,3 +78,15 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* line_coding) {
     } else if (itf == APP_CDC_SUMP_INTF) {
     }
 }
+
+static void stdio_uart0_out_chars(const char *buf, int len) {
+}
+static void stdio_uart0_out_flush(void) {
+}
+static int stdio_uart0_in_chars(char *buf, int len) {
+}
+stdio_driver_t stdio_uart0_driver = { 
+    .out_chars = stdio_uart0_out_chars,
+    .out_flush = stdio_uart0_out_flush,
+    .in_chars = stdio_uart0_in_chars
+};

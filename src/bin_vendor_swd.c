@@ -23,7 +23,7 @@
  *
  */
 
-#include "config.h"
+#include "picogbox.h"
 #include "log.h"
 #include "tusb.h"
 #include "pico_led.h"
@@ -88,7 +88,7 @@ struct __attribute__((__packed__)) probe_pkt_hdr {
 };
 
 void probe_set_swclk_freq(uint freq_khz) {
-    LOG_INF("Set swclk freq %dKHz\n", freq_khz);
+    LOG_INF("Set swclk freq %dKHz", freq_khz);
     uint clk_sys_freq_khz = clock_get_hz(clk_sys) / 1000;
     // Worked out with saleae
     uint32_t divider = clk_sys_freq_khz / freq_khz / 2;
@@ -106,7 +106,7 @@ static inline void probe_write_bits(uint bit_count, uint8_t data_byte) {
     pio_sm_put_blocking(pio0, APP_VENDOR_SWD_SM, bit_count - 1);
     pio_sm_put_blocking(pio0, APP_VENDOR_SWD_SM, data_byte);
     DEBUG_PINS_SET(probe_timing, DBG_PIN_WRITE_WAIT);
-    log_dump("Write %d bits 0x%x\n", bit_count, data_byte);
+    LOG_DEB("Write %d bits 0x%x\n", bit_count, data_byte);
     // Wait for pio to push garbage to rx fifo so we know it has finished sending
     pio_sm_get_blocking(pio0, APP_VENDOR_SWD_SM);
     DEBUG_PINS_CLR(probe_timing, DBG_PIN_WRITE_WAIT);
@@ -123,7 +123,7 @@ static inline uint8_t probe_read_bits(uint bit_count) {
         data_shifted = data_shifted >> 8-bit_count;
     }
 
-    log_dump("Read %d bits 0x%x (shifted 0x%x)\n", bit_count, data, data_shifted);
+    // TODO LOG_DEB_HEX("Read %d bits 0x%x (shifted 0x%x)\n", bit_count, data, data_shifted);
     DEBUG_PINS_CLR(probe_timing, DBG_PIN_READ);
     return data_shifted;
 }
@@ -185,7 +185,7 @@ void vendor_swd_init() {
 }
 
 void probe_handle_read(uint total_bits) {
-    LOG_DBG("Read %d bits\n", total_bits);
+    LOG_DEB("Read %d bits\n", total_bits);
     probe_read_mode();
 
     uint chunk;
@@ -204,7 +204,7 @@ void probe_handle_read(uint total_bits) {
 }
 
 void probe_handle_write(uint8_t *data, uint total_bits) {
-    LOG_DBG("Write %d bits\n", total_bits);
+    LOG_DEB("Write %d bits\n", total_bits);
 
     led_signal_activity(total_bits);
 
@@ -241,7 +241,7 @@ void probe_handle_pkt(void) {
 
     DEBUG_PINS_SET(probe_timing, DBG_PIN_PKT);
 
-    LOG_DBG("Processing packet of length %d\n", probe.rx_len);
+    LOG_DEB("Processing packet of length %d\n", probe.rx_len);
 
     probe.tx_len = 0;
     while (remaining) {
@@ -275,7 +275,7 @@ void probe_handle_pkt(void) {
         struct probe_pkt_hdr *tx_hdr = (struct probe_pkt_hdr*)&probe.tx_buf[0];
         tx_hdr->total_packet_length = probe.tx_len;
         tud_vendor_write(&probe.tx_buf[0], probe.tx_len);
-        LOG_DBG("Picoprobe wrote %d response bytes\n", probe.tx_len);
+        LOG_DEB("Picoprobe wrote %d response bytes\n", probe.tx_len);
     }
     probe.tx_len = 0;
 

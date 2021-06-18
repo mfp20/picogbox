@@ -5,7 +5,7 @@
 // USB CDC4 (bridge4: defaults to SPI master)
 // USB CDC5 (serial data application: defaults to SUMP)
 // USB VENDOR (raw data application: defaults to picoprobe)
-// UART0 is stdio in debug build, available for target device in release build
+// UART0 is stdio, available for target device on request from console
 // UART1 available for target device
 
 #if TURBO_200MHZ
@@ -14,8 +14,10 @@
 #endif
 #include <bsp/board.h>
 #include <tusb.h>
+#include <pico/stdio_uart.h>    // stdio_uart_init_full()
+#include <RP2040.h>             // NVIC_SystemReset()
 
-#include "config.h"
+#include "picogbox.h"
 #include "log.h"
 #include "pico_led.h"
 #include "pico_serialid.h"
@@ -32,50 +34,66 @@
 // global microshell object ptr
 ush_object_ptr_t ush;
 
-// base commands handlers
-#include <inc/ush_internal.h>
-
+static void ush_handler_exec_nothing(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
+}
+static void ush_handler_process_nothing(struct ush_object *self, struct ush_file_descriptor const *file) {
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
+}
 static void ush_handler_exec_info(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
     // TODO
-    ush_write_pointer(ush, "ush_handler_exec_info\r\n", USH_STATE_RESET_PROMPT);
-    ush_process_start(self, file);
+    ush_print(self, "ush_handler_exec_info\r\n");
 }
 static void ush_handler_process_info(struct ush_object *self, struct ush_file_descriptor const *file) {
     // TODO
-    ush_write_pointer(ush, "ush_handler_process_info\r\n", USH_STATE_RESET_PROMPT);
+    ush_print(self, "ush_handler_process_info\r\n");
 }
-
 static void ush_handler_exec_reboot(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
-    // TODO
+    ush_print(self, "Rebooting...\r\n");
+    NVIC_SystemReset();
 }
-static void ush_handler_process_reboot(struct ush_object *self, struct ush_file_descriptor const *file) {
-    // TODO
-}
-
 // base commands descriptor and node
 static const struct ush_file_descriptor ush_cmds_base[] = {
     {
         .name = "info",
         .description = "print some general info about the device",
-        .help = "usage: info",
+        .help = "usage: info\n\r",
         .exec = ush_handler_exec_info,
         .process = ush_handler_process_info,
     },
     {
+        .name = "log_level",
+        .description = "change log level",
+        .help = "usage: log_level [ASSERT, ERROR, WARNING, INFO, DEBUG]\n\r",
+        .exec = ush_handler_exec_nothing,
+        .process = ush_handler_process_nothing,
+    },
+    {
+        .name = "log_device",
+        .description = "change device to send log output",
+        .help = "usage: log_device [uart0, uart1, cdc1, cdc2, ..., cdcN]\n\r",
+        .exec = ush_handler_exec_nothing,
+        .process = ush_handler_process_nothing,
+    },
+    {
         .name = "reboot",
         .description = "instantly reboots the device",
-        .help = "usage: reboot",
-        .exec = ush_handler_exec_reboot,
-        .process = ush_handler_process_reboot,
+        .help = "usage: reboot\n\r",
+        .exec = ush_handler_exec_reboot
     },
 };
 static struct ush_node_object ush_node_base;
+
 
 int main(void) {
 #if TURBO_200MHZ
     vreg_set_voltage(VREG_VOLTAGE_1_15);
     set_sys_clock_khz(200000, true);
 #endif
+
+    // early init stdio on uart0
+    stdio_uart_init_full(uart0, 115200, 0, 1);
+    //stdio_set_driver_enabled(&stdio_uart0_driver, true);
 
     // hardware
     board_init();
@@ -96,6 +114,9 @@ int main(void) {
     cdc_sump_init();
     cdc_sigrock_init();
     vendor_swd_init();
+
+    unsigned char data[10] = {32, 1, 24, 56, 102, 5, 78, 92, 200, 158};
+    LOG_HEX(data, 10, "Test %s", data);
 
     // main loop start
     while (1) {
