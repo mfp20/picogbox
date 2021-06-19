@@ -12,6 +12,7 @@
 //APP_CDC_BRIDGE_UART1_INTF
 
 void cdc_uart_init(void) {
+    LOG_INF("UART init");
     gpio_set_function(APP_CDC_BRIDGE_UART0_PIN_TX, GPIO_FUNC_UART);
     gpio_set_function(APP_CDC_BRIDGE_UART0_PIN_RX, GPIO_FUNC_UART);
     uart_init(APP_CDC_BRIDGE_UART0_INST, APP_CDC_BRIDGE_UART0_BAUDRATE);

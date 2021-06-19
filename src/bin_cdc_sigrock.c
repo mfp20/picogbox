@@ -4,6 +4,7 @@
  */
 
 #include "picogbox.h"
+#include "log.h"
 #include "bin_cdc_microshell.h"
 
 #include <pico/stdlib.h>
@@ -248,6 +249,7 @@ static const struct ush_file_descriptor ush_cmds_sigrock[] = {
 static struct ush_node_object ush_node_sigrock_files, ush_node_sigrock_cmds;
 
 void cdc_sigrock_init(void) {
+    LOG_INF("Sigrock init");
     ush_node_mount(ush, "/bin/sigrock", &ush_node_sigrock_files, ush_files_sigrock, sizeof(ush_files_sigrock) / sizeof(ush_files_sigrock[0]));
     ush_commands_add(ush, &ush_node_sigrock_cmds, ush_cmds_sigrock, sizeof(ush_cmds_sigrock) / sizeof(ush_cmds_sigrock[0]));
 }

@@ -19,6 +19,7 @@
 
 #include "picogbox.h"
 #include "log.h"
+#include "manager.h"
 #include "pico_led.h"
 #include "pico_serialid.h"
 #include "bin_cdc_microshell.h"
@@ -95,6 +96,20 @@ int main(void) {
     stdio_uart_init_full(uart0, 115200, 0, 1);
     //stdio_set_driver_enabled(&stdio_uart0_driver, true);
 
+    LOG_EME("test eme");
+    LOG_ALE("test ale");
+    LOG_CRI("test cri");
+    LOG_ERR("test err");
+    LOG_WAR("test war");
+    LOG_NOT("test not");
+    LOG_INF("test inf");
+    LOG_DEB("test deb");
+    unsigned char data[20] = {32, 1, 24, 56, 102, 5, 78, 92, 200, 0, 32, 1, 24, 56, 102, 5, 78, 92, 200, 0};
+    LOG_HEX(data, 20, "test %d", 1);
+
+    manager_init();
+    manager_select_default();
+
     // hardware
     board_init();
     tusb_init();
@@ -114,17 +129,6 @@ int main(void) {
     cdc_sump_init();
     cdc_sigrock_init();
     vendor_swd_init();
-
-    LOG_EME("test eme");
-    LOG_ALE("test ale");
-    LOG_CRI("test cri");
-    LOG_ERR("test err");
-    LOG_WAR("test war");
-    LOG_NOT("test not");
-    LOG_INF("test inf");
-    LOG_DEB("test deb");
-    unsigned char data[20] = {32, 1, 24, 56, 102, 5, 78, 92, 200, 0, 32, 1, 24, 56, 102, 5, 78, 92, 200, 0};
-    LOG_HEX(data, 20, "test %d", 1);
 
     // main loop start
     while (1) {

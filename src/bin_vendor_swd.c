@@ -123,7 +123,7 @@ static inline uint8_t probe_read_bits(uint bit_count) {
         data_shifted = data_shifted >> 8-bit_count;
     }
 
-    // TODO LOG_DEB_HEX("Read %d bits 0x%x (shifted 0x%x)\n", bit_count, data, data_shifted);
+    LOG_DEB("Read %d bits 0x%x (shifted 0x%x)\n", bit_count, data, data_shifted);
     DEBUG_PINS_CLR(probe_timing, DBG_PIN_READ);
     return data_shifted;
 }

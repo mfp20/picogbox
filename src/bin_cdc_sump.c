@@ -1066,6 +1066,7 @@ cdc_sump_init_connect(void)
 void
 cdc_sump_init(void)
 {
+    LOG_INF("SUMP init");
     uint i;
 
     // claim DMA channels

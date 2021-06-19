@@ -1,5 +1,5 @@
-#ifndef PICOGBOX_CONFIG_H_
-#define PICOGBOX_CONFIG_H_
+#ifndef PICOGBOX_H_
+#define PICOGBOX_H_
 
 // log config
 #ifdef BUILD_DEBUG

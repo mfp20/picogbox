@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
 
 // compile-time level setup
 #ifndef LOG_LEVEL

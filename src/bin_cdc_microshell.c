@@ -223,6 +223,7 @@ static struct ush_node_object ush_node_bin;
 
 // microshell init
 ush_object_ptr_t app_cdc_microshell_init(void) {
+    LOG_INF("uShell init");
     ush_init(&ush, &ush_desc);
     ush_node_mount(&ush, "/", &ush_node_root, ush_files_root, sizeof(ush_files_root) / sizeof(ush_files_root[0]));
     ush_node_mount(&ush, "/sys", &ush_node_sys, ush_files_sys, sizeof(ush_files_sys) / sizeof(ush_files_sys[0]));

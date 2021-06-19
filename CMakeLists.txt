@@ -18,6 +18,7 @@ endif()
 add_executable(picogbox
         src/utils.c
         src/log.c
+        src/manager.c
         src/pico_led.c
         src/pico_serialid.c
         src/pico_power.c
