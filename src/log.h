@@ -6,9 +6,12 @@
 #include <stdio.h>
 #include <errno.h>
 
+// compile-time level setup
 #ifndef LOG_LEVEL
 #define LOG_LEVEL (7)
 #endif
+// runtime log level setup
+extern uint8 log_level;
 
 #ifndef LOG_COLOR
 #define LOG_COLOR (0)
@@ -61,28 +64,39 @@
 #define clean_errno() (errno == 0 ? "None" : strerror(errno))
 
 #ifdef BUILD_DEBUG
-#define LOG_CONTENT_FORMAT YELLOW "(errno: %s) " NONE " %s:%d:%s()\t"
+#define LOG_CONTENT_FORMAT "(errno: %s) %s::%d::%s\t"
 #define LOG_CONTENT_VARS clean_errno(), __FILENAME__, __LINE__, __func__
 #else
-#define LOG_CONTENT_FORMAT YELLOW " (errno: %s) " NONE " %s() "
+#define LOG_CONTENT_FORMAT "(errno: %s) %s\t"
 #define LOG_CONTENT_VARS clean_errno(), __func__
 #endif
 
-// composers without \n
-#define LOG_EME_NON(M, ...)	printf("%010ld " RED    "[EMERG]   " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
-#define LOG_ALE_NON(M, ...)	printf("%010ld " PURPLE "[ALERT]   " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
-#define LOG_CRI_NON(M, ...)	printf("%010ld " YELLOW "[CRIT]    " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
-#define LOG_ERR_NON(M, ...)	printf("%010ld " BROWN  "[ERR]     " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
-#define LOG_WAR_NON(M, ...)	printf("%010ld " GREEN  "[WARNING] " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
-#define LOG_NOT_NON(M, ...)	printf("%010ld " L_BLUE "[NOTICE]  " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
-#define LOG_INF_NON(M, ...)	printf("%010ld " CYAN   "[INFO]    " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
-#define LOG_DEB_NON(M, ...)	printf("%010ld " GRAY   "[DEBUG]   " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
-int printk_hex(unsigned char *buff, unsigned int count, char *str_val);
-#define LOG_HEX_NON(D, N, M, ...) { \
-                            char str_val[N*5]; \
+// 
+#define LOG_EME_UNFILTERED(M, ...)	printf("%010ld " RED    "[EMERG]   " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_ALE_UNFILTERED(M, ...)	printf("%010ld " PURPLE "[ALERT]   " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_CRI_UNFILTERED(M, ...)	printf("%010ld " YELLOW "[CRIT]    " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_ERR_UNFILTERED(M, ...)	printf("%010ld " BROWN  "[ERR]     " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_WAR_UNFILTERED(M, ...)	printf("%010ld " GREEN  "[WARNING] " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_NOT_UNFILTERED(M, ...)	printf("%010ld " L_BLUE "[NOTICE]  " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_INF_UNFILTERED(M, ...)	printf("%010ld " CYAN   "[INFO]    " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+#define LOG_DEB_UNFILTERED(M, ...)	printf("%010ld " GRAY   "[DEBUG]   " LOG_CONTENT_FORMAT NONE M , monotonic32(), LOG_CONTENT_VARS, ##__VA_ARGS__);
+void printk_hex(unsigned char *in, unsigned int count, char *out);
+#define LOG_HEX_UNFILTERED(D, N, M, ...) { \
+                            char str_val[N*15]; \
                             printk_hex(D, N, str_val); \
-                            printf("%010ld " "[DEBUG]   " "%s" M "\n", monotonic32(), str_val, ##__VA_ARGS__); \
+                            printf("%010ld " "[DEBUG]   (%d Bytes) " M "%s", monotonic32(), N, ##__VA_ARGS__, str_val); \
                         }
+
+// without \n
+#define LOG_EME_NON(M, ...) if (log_level >= EMERG) LOG_EME_UNFILTERED(M, ##__VA_ARGS__);
+#define LOG_ALE_NON(M, ...) if (log_level >= ALERT) LOG_ALE_UNFILTERED(M, ##__VA_ARGS__);
+#define LOG_CRI_NON(M, ...) if (log_level >= CRIT) LOG_CRI_UNFILTERED(M, ##__VA_ARGS__);
+#define LOG_ERR_NON(M, ...) if (log_level >= ERR) LOG_ERR_UNFILTERED(M, ##__VA_ARGS__);
+#define LOG_WAR_NON(M, ...) if (log_level >= WARNING) LOG_WAR_UNFILTERED(M, ##__VA_ARGS__);
+#define LOG_NOT_NON(M, ...) if (log_level >= NOTICE) LOG_NOT_UNFILTERED(M, ##__VA_ARGS__);
+#define LOG_INF_NON(M, ...) if (log_level >= INFO) LOG_INF_UNFILTERED(M, ##__VA_ARGS__);
+#define LOG_DEB_NON(M, ...) if (log_level >= DEBUG) LOG_DEB_UNFILTERED(M, ##__VA_ARGS__);
+#define LOG_HEX_NON(D, N, M, ...) if (log_level >= DEBUG) LOG_HEX_UNFILTERED(D, N, M, ##__VA_ARGS__);
 
 // add \n
 #define LOG_EME(M, ...) LOG_EME_NON(M, ##__VA_ARGS__); printf("\n");
@@ -117,44 +131,44 @@ int printk_hex(unsigned char *buff, unsigned int count, char *str_val);
 
 #if LOG_LEVEL < NOTICE
 #undef LOG_NOT_NON
-#define LOG_NOT_NON(M, ...) { ; }
+#define LOG_NOT_NON(M, ...) ((void)0)
 #undef LOG_NOT
-#define LOG_NOT(M, ...) { ; }
+#define LOG_NOT(M, ...) ((void)0)
 #endif
 
 #if LOG_LEVEL < WARNING
 #undef LOG_WARING_NON
-#define LOG_WARING_NON(M, ...) { ; }
+#define LOG_WARING_NON(M, ...) ((void)0)
 #undef LOG_WARING
-#define LOG_WARING(M, ...) { ; }
+#define LOG_WARING(M, ...) ((void)0)
 #endif
 
 #if LOG_LEVEL < ERR
 #undef LOG_ERR_NON
-#define LOG_ERR_NON(M, ...) { ; }
+#define LOG_ERR_NON(M, ...) ((void)0)
 #undef LOG_ERR
-#define LOG_ERR(M, ...) { ; }
+#define LOG_ERR(M, ...) ((void)0)
 #endif
 
 #if LOG_LEVEL < CRIT
 #undef LOG_CRI_NON
-#define LOG_CRI_NON(M, ...) { ; }
+#define LOG_CRI_NON(M, ...) ((void)0)
 #undef LOG_CRI
-#define LOG_CRI(M, ...) { ; }
+#define LOG_CRI(M, ...) ((void)0)
 #endif
 
 #if LOG_LEVEL < ALERT
 #undef LOG_ALE_NON
-#define LOG_ALE_NON(M, ...) { ; }
+#define LOG_ALE_NON(M, ...) ((void)0)
 #undef LOG_ALE
-#define LOG_ALE(M, ...) { ; }
+#define LOG_ALE(M, ...) ((void)0)
 #endif
 
 #if LOG_LEVEL < EMERG
 #undef LOG_EME_NON
-#define LOG_EME_NON(M, ...) { ; }
+#define LOG_EME_NON(M, ...) ((void)0)
 #undef LOG_EME
-#define LOG_EME(M, ...) { ; }
+#define LOG_EME(M, ...) ((void)0)
 #endif
 
 // undefine colors according to configuration

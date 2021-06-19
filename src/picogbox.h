@@ -5,7 +5,7 @@
 #ifdef BUILD_DEBUG
 #define LOG_LEVEL (7)
 #else
-#define LOG_LEVEL (5)
+#define LOG_LEVEL (6)
 #endif
 #define LOG_COLOR (1)
 

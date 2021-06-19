@@ -115,8 +115,16 @@ int main(void) {
     cdc_sigrock_init();
     vendor_swd_init();
 
-    unsigned char data[10] = {32, 1, 24, 56, 102, 5, 78, 92, 200, 158};
-    LOG_HEX(data, 10, "Test %s", data);
+    LOG_EME("test eme");
+    LOG_ALE("test ale");
+    LOG_CRI("test cri");
+    LOG_ERR("test err");
+    LOG_WAR("test war");
+    LOG_NOT("test not");
+    LOG_INF("test inf");
+    LOG_DEB("test deb");
+    unsigned char data[20] = {32, 1, 24, 56, 102, 5, 78, 92, 200, 0, 32, 1, 24, 56, 102, 5, 78, 92, 200, 0};
+    LOG_HEX(data, 20, "test %d", 1);
 
     // main loop start
     while (1) {

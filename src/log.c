@@ -1,66 +1,48 @@
+#include "log.h"
+#include <stdio.h>
 
-#include <string.h>
+uint8 log_level = LOG_LEVEL;
 
-int printk_hex(unsigned char *buff, unsigned int count, char *str_val)
-{
-	static const char hex[] = "0123456789abcdef";
-	unsigned int i, j;
-	char str[16];
-	//char str_val[75];
-	unsigned int index = 0;
-	unsigned int str_index = 0;
-	unsigned int cnt;
-
-	if(count % 16)
-	{
-		cnt = count / 16 + 1;
-	}
-	else
-	{
-		cnt = count / 16;
-	}
-
-	for(i = 0; i < cnt; i++)
-	{
-		index = 0;
-		str_index = 0;
-		str_val[index++] = hex[(i & 0xf000) >> 12];
-		str_val[index++] = hex[(i & 0xf00) >> 8];
-		str_val[index++] = hex[(i & 0xf0) >> 4];
-		str_val[index++] = hex[i & 0xf];
-		str_val[index++] = ' ';
-		str_val[index++] = ' ';
-
-		for(j = 0; j < 16; j++)
-		{
-			if(j + (i << 4) < count)
-			{
-				str_val[index++] = hex[(buff[j + (i << 4)] & 0xf0) >> 4];
-				str_val[index++] = hex[buff[j + (i << 4)] & 0xf];
-				str_val[index++] = ' ';
-				if((buff[j] >= 0x20) && (buff[j] <= 0x7e))
-				{
-					str[str_index++] = buff[j];
-				}
-				else
-				{
-					str[str_index++] = '.';
-				}
-			}
-			else
-			{
-				str_val[index++] = ' ';
-				str_val[index++] = ' ';
-				str_val[index++] = ' ';
-				str[str_index++] = ' ';
-			}
+void printk_hex(unsigned char *in, unsigned int count, char *out) {
+	unsigned int size = 0;
+	char ascii[16] = {};
+	int index = 0;
+	while(size<count) {
+		if (!(size%0x10)) {
+			index += snprintf(out+index, count*5, "\n\t\t%08x: ", size);
+		} else if (!(size%8)) {
+			//	After per 8 bytes insert two space for split
+			index += snprintf(out+index, count*5, " ");
 		}
-		str_val[index++] = ' ';
-		str_val[index++] = ' ';
-		memcpy(&str_val[index], str, str_index);
-		index += str_index;
-		str_val[index++] = '\n';
-		str_val[index++] = '\0';
+
+		// handle Ascii detail area, store current byte
+		ascii[size%16] = ((in[size] >= '!') && (in[size] <= '~')) ? in[size] : '.';
+
+		// print current byte
+		index += snprintf(out+index, count*5, "%02x ", in[size]);
+		size++;
+
+		//
+		if (!(size%16) || (size == count)) {
+			//	Empty bytes
+			unsigned char len = size%16;
+			if (len) {
+				len = 16 - len;
+				while(len--) {
+					index += snprintf(out+index, count*5, "   ");
+					if (len==8) {
+						index += snprintf(out+index, count*5, " ");
+					}
+				}
+			}
+			index += snprintf(out+index, count*5, "    %s", ascii);
+			if (size == count)
+				break;
+		}
 	}
-	return 0;
+}
+
+void log_set_level(uint8 level) {
+	if (log_level > LOG_LEVEL) level = LOG_LEVEL;
+	log_level = level;
 }
