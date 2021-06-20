@@ -1,6 +1,7 @@
+#include <RP2040.h> // NVIC_SystemReset()
 
-#include "picogbox.h"
 #include "log.h"
+#include "manager.h"
 #include "tusb.h"
 #include "bin_cdc_microshell.h"
 
@@ -15,14 +16,18 @@
 static char ush_in_buf[BUF_IN_SIZE];
 static char ush_out_buf[BUF_OUT_SIZE];
 
+// CDC IO
+static uint8 cdc_no = 0;
 // microshell main object
-static struct ush_object ush;
+static struct ush_object _ush;
+
+
 // microshell non-blocking read interface
 static int ush_read(struct ush_object *self, char *ch)
 {
-    if (tud_cdc_n_connected(APP_CDC_MICROSHELL_INTF)) {
-        if (tud_cdc_n_available(APP_CDC_MICROSHELL_INTF)) {
-            return (int)tud_cdc_n_read(APP_CDC_MICROSHELL_INTF, ch, 1);
+    if (tud_cdc_n_connected(cdc_no)) {
+        if (tud_cdc_n_available(cdc_no)) {
+            return (int)tud_cdc_n_read(cdc_no, ch, 1);
         }
     }
     return 0;
@@ -30,11 +35,10 @@ static int ush_read(struct ush_object *self, char *ch)
 // microshell non-blocking write interface
 static int ush_write(struct ush_object *self, char ch)
 {
-    //return (Serial.write(ch) == 1);
-    if (tud_cdc_n_connected(APP_CDC_MICROSHELL_INTF)) {
-        if (tud_cdc_n_write_available(APP_CDC_MICROSHELL_INTF) > 0) {
-            int res = tud_cdc_n_write_char(APP_CDC_MICROSHELL_INTF, ch);
-            tud_cdc_n_write_flush(APP_CDC_MICROSHELL_INTF);
+    if (tud_cdc_n_connected(cdc_no)) {
+        if (tud_cdc_n_write_available(cdc_no) > 0) {
+            int res = tud_cdc_n_write_char(cdc_no, ch);
+            tud_cdc_n_write_flush(cdc_no);
             return res;
         }
     }
@@ -57,6 +61,59 @@ const struct ush_descriptor ush_desc = {
     // ush_file_execute_callback exec;                 /**< General command execute callback (optional) */
 };
 
+
+// base commands
+static void ush_handler_exec_nothing(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
+}
+static void ush_handler_process_nothing(struct ush_object *self, struct ush_file_descriptor const *file) {
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
+}
+static void ush_handler_exec_info(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
+    // TODO
+    ush_print(self, "ush_handler_exec_info\r\n");
+}
+static void ush_handler_process_info(struct ush_object *self, struct ush_file_descriptor const *file) {
+    // TODO
+    ush_print(self, "ush_handler_process_info\r\n");
+}
+static void ush_handler_exec_reboot(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
+    ush_print(self, "Rebooting...\r\n");
+    NVIC_SystemReset();
+}
+// base commands descriptor and node
+static const struct ush_file_descriptor ush_cmds_base[] = {
+    {
+        .name = "info",
+        .description = "print some general info about the device",
+        .help = "usage: info\n\r",
+        .exec = ush_handler_exec_info,
+        .process = ush_handler_process_info,
+    },
+    {
+        .name = "log_level",
+        .description = "change log level",
+        .help = "usage: log_level [ASSERT, ERROR, WARNING, INFO, DEBUG]\n\r",
+        .exec = ush_handler_exec_nothing,
+        .process = ush_handler_process_nothing,
+    },
+    {
+        .name = "log_device",
+        .description = "change device to send log output",
+        .help = "usage: log_device [uart0, uart1, cdc1, cdc2, ..., cdcN]\n\r",
+        .exec = ush_handler_exec_nothing,
+        .process = ush_handler_process_nothing,
+    },
+    {
+        .name = "reboot",
+        .description = "instantly reboots the device",
+        .help = "usage: reboot\n\r",
+        .exec = ush_handler_exec_reboot
+    },
+};
+static struct ush_node_object ush_node_base;
+
+
 // node / (root)
 static size_t ush_handler_get_root_readme(struct ush_object *self, struct ush_file_descriptor const *file, uint8_t **data) {
     static const char *info = "This is the root folder.\n\rTo list folder contents you can use 'ls' command. Choose one sub folder by typing 'cd <name>'.\n\rAfter you 'cd' into the folder, a new README together with files and commands will be available using 'ls' again.\n\r";
@@ -76,6 +133,7 @@ static const struct ush_file_descriptor ush_files_root[] = {
 };
 static struct ush_node_object ush_node_root;
 
+
 // node /dev
 static size_t ush_handler_get_dev_readme(struct ush_object *self, struct ush_file_descriptor const *file, uint8_t **data) {
     static const char *info = "In this folder there are all available devices to be used with apps.\n\rTo list folder contents you can use \"ls\" command. Choose one by typing \"cd <name>\".\n\rAfter you \"cd\" into the folder, a new README together with files and commands will be available using \"ls\" again.\n\r";
@@ -94,6 +152,7 @@ static const struct ush_file_descriptor ush_files_dev[] = {
     },
 };
 static struct ush_node_object ush_node_dev;
+
 
 // node /sys
 static size_t ush_handler_get_sys_readme(struct ush_object *self, struct ush_file_descriptor const *file, uint8_t **data) {
@@ -202,6 +261,7 @@ static const struct ush_file_descriptor ush_files_sys[] = {
 };
 static struct ush_node_object ush_node_sys;
 
+
 // node /bin
 static size_t ush_handler_get_bin_readme(struct ush_object *self, struct ush_file_descriptor const *file, uint8_t **data) {
     static const char *info =   "In this folder there are all available binaries (ie: applications).\n\rTo list folder contents you can use \"ls\" command. Choose one by typing \"cd <name>\".\n\rAfter you \"cd\" into the folder, a new README together with files and commands will be available using \"ls\" again.\n\r";
@@ -221,13 +281,32 @@ static const struct ush_file_descriptor ush_files_bin[] = {
 };
 static struct ush_node_object ush_node_bin;
 
-// microshell init
-ush_object_ptr_t app_cdc_microshell_init(void) {
-    LOG_INF("uShell init");
-    ush_init(&ush, &ush_desc);
-    ush_node_mount(&ush, "/", &ush_node_root, ush_files_root, sizeof(ush_files_root) / sizeof(ush_files_root[0]));
-    ush_node_mount(&ush, "/sys", &ush_node_sys, ush_files_sys, sizeof(ush_files_sys) / sizeof(ush_files_sys[0]));
-    ush_node_mount(&ush, "/dev", &ush_node_dev, ush_files_dev, sizeof(ush_files_dev) / sizeof(ush_files_dev[0]));
-    ush_node_mount(&ush, "/bin", &ush_node_bin, ush_files_bin, sizeof(ush_files_bin) / sizeof(ush_files_bin[0]));
-    return &ush;
+
+static void microshell_task(void *data) {
+    ush_service(&_ush);
 }
+
+// microshell init
+static const consumer_meta_t user = {
+    .name = "USHELL CONSOLE",
+    .task = microshell_task
+};
+
+void bin_cdc_microshell_init(uint8 cdc) {
+    if (usb_cdc_alloc(cdc, &user)>=0) {
+        LOG_INF("uShell init on USB CDC %d", cdc);
+    } else {
+        LOG_WAR("Coudn't allocate microshell to USB CDC %d", cdc);
+    }
+    cdc_no = cdc;
+    // set global pointer
+    ush = &_ush;
+    //
+    ush_init(ush, &ush_desc);
+    ush_commands_add(ush, &ush_node_base, ush_cmds_base, sizeof(ush_cmds_base) / sizeof(ush_cmds_base[0]));
+    ush_node_mount(ush, "/", &ush_node_root, ush_files_root, sizeof(ush_files_root) / sizeof(ush_files_root[0]));
+    ush_node_mount(ush, "/sys", &ush_node_sys, ush_files_sys, sizeof(ush_files_sys) / sizeof(ush_files_sys[0]));
+    ush_node_mount(ush, "/dev", &ush_node_dev, ush_files_dev, sizeof(ush_files_dev) / sizeof(ush_files_dev[0]));
+    ush_node_mount(ush, "/bin", &ush_node_bin, ush_files_bin, sizeof(ush_files_bin) / sizeof(ush_files_bin[0]));
+}
+ 

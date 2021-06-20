@@ -19,11 +19,13 @@ add_executable(picogbox
         src/utils.c
         src/log.c
         src/manager.c
+        src/managed_uart.c
         src/pico_led.c
         src/pico_serialid.c
         src/pico_power.c
         src/tusb_config.c
         src/bin_cdc_microshell.c
+        src/bin_cdc_binary.c
         src/bin_cdc_bridge_uart.c
         src/bin_cdc_sump.c
         src/bin_cdc_sigrock.c
@@ -50,6 +52,9 @@ target_link_libraries(picogbox PRIVATE
                         hardware_pio 
                         hardware_dma 
                         hardware_pwm
+                        hardware_uart
+                        hardware_i2c
+                        hardware_spi
                         ush
                         )
 

@@ -1,11 +1,11 @@
 #ifndef LOG_H
 #define LOG_H
 
-#include "picogbox.h"
+#include "picogbox.h" // uint8
 
-#include <stdio.h>
-#include <errno.h>
-#include <string.h>
+#include <stdio.h> // printf
+#include <errno.h> // errno
+#include <string.h> // strerror
 
 // compile-time level setup
 #ifndef LOG_LEVEL

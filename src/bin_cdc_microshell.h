@@ -3,8 +3,6 @@
 
 #include <microshell.h>
 
-typedef struct ush_object* ush_object_ptr_t;
-
-ush_object_ptr_t app_cdc_microshell_init(void);
+void bin_cdc_microshell_init(uint8 cdc);
 
 #endif

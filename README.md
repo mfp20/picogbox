@@ -11,14 +11,14 @@ This is a mashup of external projects:
 Currently they barely stick together using some Superglue and Duck Tape. The Plan from main.cpp:
 
 ```
-// USB CDC0 (user console)
-// USB CDC1 (bridge1: defaults to UART0)
-// USB CDC2 (bridge2: defaults to UART1)
-// USB CDC3 (bridge3: defaults to I2C master)
-// USB CDC4 (bridge4: defaults to SPI master)
-// USB CDC5 (serial data application: defaults to SUMP)
+// USB CDC0 (user text console)
+// USB CDC1 (user binary console)
+// USB CDC2 (defaults to UART0 bridge)
+// USB CDC3 (defaults to UART1 bridge)
+// USB CDC4 (defaults to SUMP logic analyser)
+// USB CDC5 (defaults to local log)
 // USB VENDOR (raw data application: defaults to picoprobe)
-// UART0 is stdio in debug build, available for target device in release build
+// UART0 is stdio, available for target device on request from console
 // UART1 available for target device
 ```
 

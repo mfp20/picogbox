@@ -3,8 +3,12 @@
 
 #include "picogbox.h"
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <pico.h>
+#include <pico/stdlib.h>
+
+#include "pico_power.h"
+#include "pico_led.h"
+#include "pico_serialid.h"
 
 enum pin_e {
     P0 = 0,
@@ -39,20 +43,6 @@ enum pin_e {
     P29,
     PIN_NO,
     PIN_NONE = UINT8_MAX
-};
-
-enum pin_func_e {
-    XIP = 0,
-    SPI = 1,
-    UART = 2,
-    I2C = 3,
-    PWM = 4,
-    SIO = 5,
-    PIO0 = 6,
-    PIO1 = 7,
-    GPCK = 8,
-    USB = 9,
-    PIN_FUNC_NONE = 0x1f,
 };
 
 enum pin_cap_e {
@@ -140,15 +130,60 @@ enum spi_e {
     SPI_NO
 };
 
+enum resource_type_e {
+    RSRC_PIN = 0,
+    RSRC_CDC = 0,
+    RSRC_VEN = 0,
+    RSRC_UART = 0,
+    RSRC_I2C = 0,
+    RSRC_SPI = 0
+};
+
+typedef struct resource_meta_s {
+    char const* name;
+} resource_meta_t;
+
+typedef struct consumer_meta_s {
+    char const* name;
+    task_t task;
+} consumer_meta_t;
+
+typedef struct alloc_meta_s {
+    uint8 type;
+    resource_meta_t rsrc;
+    consumer_meta_t const* user;
+} alloc_meta_t;
+
+
+//
+extern alloc_meta_t alloc[64];
+extern uint8 alloc_no;
+extern ush_object_ptr_t ush;
 
 void manager_init(void);
-int PIN_GET(bool digital, bool analog, bool input, bool output, uint8 func);
-int USB_CDC_GET_BRIDGE(void);
-int USB_CDC_GET_APP(void);
-int USB_VENDOR_GET(void);
-int UART_GET(void);
-int I2C_GET(void);
-int SPI_GET(uint8 cs_count);
-void manager_select_default(void);
+
+int pin_alloc(uint8 id, consumer_meta_t const* user);
+void pin_free(uint8 id);
+int pin_get(consumer_meta_t const* user, bool digital, bool analog, bool input, bool output, uint8 func);
+
+int usb_cdc_alloc(uint8 id, consumer_meta_t const* user);
+void usb_cdc_free(uint8 id);
+int usb_cdc_get(consumer_meta_t const* user);
+
+int usb_vendor_alloc(uint8 id, consumer_meta_t const* user);
+void usb_vendor_free(uint8 id);
+int usb_vendor_get(consumer_meta_t const* user);
+
+int uart_alloc(uint8 id, consumer_meta_t const* user, uint8 tx, uint8 rx);
+void uart_free(uint8 id);
+int uart_get(consumer_meta_t const* user);
+
+int i2c_alloc(uint8 id, consumer_meta_t const* user, uint8 sda, uint8 scl);
+void i2c_free(uint8 id);
+int i2c_get(consumer_meta_t const* user);
+
+int spi_alloc(uint8 id, consumer_meta_t const* user, uint8 miso, uint8 mosi, uint8 sck, uint8 cs_count, ...);
+void spi_free(uint8 id);
+int spi_get(consumer_meta_t const* user, uint8 cs_count);
 
 #endif

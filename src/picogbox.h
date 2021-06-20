@@ -9,23 +9,12 @@
 #endif
 #define LOG_COLOR (1)
 
-// LED config
-#define LED_PIN 25
-
-// Console
-#define APP_CDC_MICROSHELL_INTF 0
-
 // UARTx bridge
 #define APP_CDC_BRIDGE_UART0_INTF       1
 #define APP_CDC_BRIDGE_UART0_INST       uart0
-#define APP_CDC_BRIDGE_UART0_PIN_TX     0
-#define APP_CDC_BRIDGE_UART0_PIN_RX     1
-#define APP_CDC_BRIDGE_UART0_BAUDRATE   115200
 #define APP_CDC_BRIDGE_UART1_INTF       2
 #define APP_CDC_BRIDGE_UART1_INST       uart1
-#define APP_CDC_BRIDGE_UART1_PIN_TX     4
-#define APP_CDC_BRIDGE_UART1_PIN_RX     5
-#define APP_CDC_BRIDGE_UART1_BAUDRATE   115200
+#define UART_DEFAULT_BAUDRATE           115200
 
 // SUMP protocol
 #define APP_CDC_SUMP_INTF		        5
@@ -44,8 +33,8 @@
 #define TURBO_200MHZ 1
 #endif
 
-#include "types.h"
 #include "gcc.h"
+#include "types.h"
 
 uint32 monotonic32(void);
 uint64 monotonic64(void);

@@ -96,9 +96,9 @@ void print_capture_buf_csv(const uint32_t *buf, uint pin_base, uint pin_count, u
         // Blink the LED every 2500 samples to show something is happening
         // Good for a serial capture where you cannot see if it is still outputting
         if ((sample % 5000) == 0)
-            gpio_put(LED_PIN, 1);
+            gpio_put(PICO_DEFAULT_LED_PIN, 1);
         else if ((sample % 5000) == 2500)
-            gpio_put(LED_PIN, 0);
+            gpio_put(PICO_DEFAULT_LED_PIN, 0);
 
         printf("\n");
     }
@@ -255,9 +255,9 @@ void cdc_sigrock_init(void) {
 }
 
 void cdc_sigrock_task(void) {
-    gpio_put(LED_PIN, 1);
+    gpio_put(PICO_DEFAULT_LED_PIN, 1);
     sleep_ms(1000);
-    gpio_put(LED_PIN, 0);
+    gpio_put(PICO_DEFAULT_LED_PIN, 0);
 
     uint32_t capture_buf_memory_size = (CAPTURE_PIN_COUNT * CAPTURE_N_SAMPLES + 31) / 32 * sizeof(uint32_t);
     capture_buf = malloc(capture_buf_memory_size);
@@ -273,7 +273,7 @@ void cdc_sigrock_task(void) {
     printf("Capture speed is %f.2\n", caphz);
 
     printf("Arming trigger\n");
-    gpio_put(LED_PIN, 1);
+    gpio_put(PICO_DEFAULT_LED_PIN, 1);
 
     logic_analyser_arm(pio, sm, dma_chan, capture_buf,
         (CAPTURE_PIN_COUNT * CAPTURE_N_SAMPLES + 31) / 32,
@@ -281,7 +281,7 @@ void cdc_sigrock_task(void) {
 
     dma_channel_wait_for_finish_blocking(dma_chan);
 
-    gpio_put(LED_PIN, 0);
+    gpio_put(PICO_DEFAULT_LED_PIN, 0);
     print_capture_buf_csv(capture_buf, CAPTURE_PIN_BASE, CAPTURE_PIN_COUNT, CAPTURE_N_SAMPLES);
 
     pio_remove_program(pio, capture_prog_2, offset);

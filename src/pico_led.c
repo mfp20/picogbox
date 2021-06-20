@@ -36,21 +36,21 @@ static uint32_t led_count;
 void led_init(void) {
     led_count = 0;
 
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
-    gpio_put(LED_PIN, 1);
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+    gpio_put(PICO_DEFAULT_LED_PIN, 1);
 }
 
 void led_task(void) {
     if (led_count != 0) {
         --led_count;
-        gpio_put(LED_PIN, !((led_count >> LED_COUNT_SHIFT) & 1));
+        gpio_put(PICO_DEFAULT_LED_PIN, !((led_count >> LED_COUNT_SHIFT) & 1));
     }
 }
 
 void led_signal_activity(uint total_bits) {
     if (led_count == 0) {
-        gpio_put(LED_PIN, 0);
+        gpio_put(PICO_DEFAULT_LED_PIN, 0);
     }
 
     if (led_count < LED_COUNT_MAX) {
