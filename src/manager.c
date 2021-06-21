@@ -1,12 +1,6 @@
 #include "log.h"
 #include "manager.h"
 
-#include <pico.h>
-#include <hardware/gpio.h>
-#include <hardware/uart.h>
-#include <hardware/i2c.h>
-#include <hardware/spi.h>
-
 #include <stdarg.h>
 
 // allocations register
@@ -32,18 +26,7 @@ static void alloc_remove(uint8 type, char *name) {
 
 
 // PIN
-typedef struct pin_def_s {
-    uint8 id;
-    char *name;
-    bool digital;
-    bool analog;
-    bool input;
-    bool output;
-    uint8 func[9];
-    bool onboard;
-    bool wired;
-} pin_def_t;
-static const pin_def_t PIN_DEF[PIN_NO] = {
+const pin_def_t PIN_DEF[PIN_NO] = {
     {
         .id = 0,
         .name = "PIN0",
@@ -653,13 +636,50 @@ int pin_get(consumer_meta_t const* user, bool digital, bool analog, bool input, 
     return -1;
 }
 
+// PIO
+const pio_def_t PIO_DEF[PIO_NO] = {
+    {
+        .id = pio0,
+        .name = "PIO0"
+    },
+    {
+        .id = pio1,
+        .name = "PIO1"
+    }
+};
+bool pio_avail[PIO_NO];
+int pio_alloc(uint8 id, consumer_meta_t const* user) {
+    if (id>PIO_NO) return -1;
+    if (pio_avail[id]) {
+        pio_avail[id] = false;
+        alloc[alloc_no].type = RSRC_PIO;
+        alloc[alloc_no].rsrc.name = PIO_DEF[id].name;
+        alloc[alloc_no].user = user;
+        alloc_no++;
+        LOG_NOT("PIO %d allocated", id);
+        return id;
+    }
+    LOG_INF("PIO %d already in use", id);
+    return -1;
+}
+void pio_free(uint8 id) {
+    pio_avail[id] = true;
+    alloc_remove(RSRC_PIO, PIO_DEF[id].name);
+    LOG_NOT("PIO %d free'ed", id);
+}
+int pio_get(consumer_meta_t const* user) {
+    LOG_INF("Searching for pio...");
+    for (uint8 i=0;i<PIO_NO;i++) {
+        if (pio_avail[i]) {
+            return pio_alloc(i, user);
+        }
+    }
+    return -1;
+}
+
 
 // USB_CDC
-typedef struct usb_cdc_def_s {
-    uint8 id;
-    char *name;
-} usb_cdc_def_t;
-static const usb_cdc_def_t USB_CDC_DEF[6] = {
+const usb_cdc_def_t USB_CDC_DEF[6] = {
     {
         .id = 0,
         .name = "CDC0"
@@ -724,11 +744,7 @@ int usb_cdc_get(consumer_meta_t const* user) {
 
 
 // USB_VENDOR
-typedef struct usb_vendor_def_s {
-    uint8 id;
-    char *name;
-} usb_vendor_def_t;
-static const usb_vendor_def_t USB_VENDOR_DEF[1] = {
+const usb_vendor_def_t USB_VENDOR_DEF[1] = {
     {
         .id = 0,
         .name = "VENDOR0"
@@ -766,11 +782,7 @@ int usb_vendor_get(consumer_meta_t const* user) {
 
 
 // UART
-typedef struct uart_def_s {
-    uart_inst_t *id;
-    char *name;
-} uart_def_t;
-static const uart_def_t UART_DEF[2] = {
+const uart_def_t UART_DEF[2] = {
     {
         .id = uart0,
         .name = "UART0"
@@ -881,11 +893,7 @@ int uart_get(consumer_meta_t const* user) {
 
 
 // I2C
-typedef struct i2c_def_s {
-    i2c_inst_t *id;
-    char *name;
-} i2c_def_t;
-static const i2c_def_t I2C_DEF[2] = {
+const i2c_def_t I2C_DEF[2] = {
     {
         .id = i2c0,
         .name = "I2C0"
@@ -995,11 +1003,7 @@ int i2c_get(consumer_meta_t const* user) {
 
 
 // SPI
-typedef struct spi_def_s {
-    spi_inst_t *id;
-    char *name;
-} spi_def_t;
-static const spi_def_t SPI_DEF[2] = {
+const spi_def_t SPI_DEF[2] = {
     {
         .id = spi0,
         .name = "SPI0"

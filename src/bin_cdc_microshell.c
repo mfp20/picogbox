@@ -2,12 +2,12 @@
 
 #include "log.h"
 #include "manager.h"
-#include "tusb.h"
 #include "bin_cdc_microshell.h"
 
 #include <pico.h>
 #include <hardware/timer.h>
 #include <hardware/rtc.h>
+#include <tusb.h>
 
 // working buffers allocations (size could be customized)
 #define BUF_IN_SIZE    32

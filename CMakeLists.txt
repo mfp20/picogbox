@@ -42,6 +42,7 @@ target_link_libraries(picogbox PRIVATE
                         pico_stdlib
                         pico_stdio_uart
                         pico_unique_id
+                        pico_multicore
                         tinyusb_device 
                         tinyusb_board
                         hardware_regs

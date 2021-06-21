@@ -13,10 +13,10 @@ Currently they barely stick together using some Superglue and Duck Tape. The Pla
 ```
 // USB CDC0 (user text console)
 // USB CDC1 (user binary console)
-// USB CDC2 (defaults to UART0 bridge)
+// USB CDC2 (defaults to local log)
 // USB CDC3 (defaults to UART1 bridge)
-// USB CDC4 (defaults to SUMP logic analyser)
-// USB CDC5 (defaults to local log)
+// USB CDC4 (defaults to sigrock logic analyser)
+// USB CDC5 (unused)
 // USB VENDOR (raw data application: defaults to picoprobe)
 // UART0 is stdio, available for target device on request from console
 // UART1 available for target device

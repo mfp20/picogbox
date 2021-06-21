@@ -2,6 +2,7 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
+ * Anichang 2021
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,18 +24,19 @@
  *
  */
 
-#include "picogbox.h"
 #include "log.h"
-#include "tusb.h"
+#include "manager.h"
 #include "pico_led.h"
+#include "bin_cdc_microshell.h"
 #include "bin_vendor_swd.pio.h"
 
+#include <tusb.h>
 #include <pico/stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
 #include <hardware/clocks.h>
 #include <hardware/gpio.h>
+
+#include <stdio.h>
+#include <string.h>
 
 #define DIV_ROUND_UP(m, n)	(((m) + (n) - 1) / (n))
 
@@ -87,36 +89,38 @@ struct __attribute__((__packed__)) probe_pkt_hdr {
     uint32_t total_packet_length;
 };
 
+static PIO pio;
+
 void probe_set_swclk_freq(uint freq_khz) {
     LOG_INF("Set swclk freq %dKHz", freq_khz);
     uint clk_sys_freq_khz = clock_get_hz(clk_sys) / 1000;
     // Worked out with saleae
     uint32_t divider = clk_sys_freq_khz / freq_khz / 2;
-    pio_sm_set_clkdiv_int_frac(pio0, APP_VENDOR_SWD_SM, divider, 0);
+    pio_sm_set_clkdiv_int_frac(pio, BIN_VENDOR_SWD_SM, divider, 0);
 }
 
 static inline void probe_assert_reset(bool state)
 {
     /* Change the direction to out to drive pin to 0 or to in to emulate open drain */
-    gpio_set_dir(APP_VENDOR_SWD_PIN_RESET, state);
+    gpio_set_dir(BIN_VENDOR_SWD_PIN_RESET, state);
 }
 
 static inline void probe_write_bits(uint bit_count, uint8_t data_byte) {
     DEBUG_PINS_SET(probe_timing, DBG_PIN_WRITE);
-    pio_sm_put_blocking(pio0, APP_VENDOR_SWD_SM, bit_count - 1);
-    pio_sm_put_blocking(pio0, APP_VENDOR_SWD_SM, data_byte);
+    pio_sm_put_blocking(pio, BIN_VENDOR_SWD_SM, bit_count - 1);
+    pio_sm_put_blocking(pio, BIN_VENDOR_SWD_SM, data_byte);
     DEBUG_PINS_SET(probe_timing, DBG_PIN_WRITE_WAIT);
     LOG_DEB("Write %d bits 0x%x\n", bit_count, data_byte);
     // Wait for pio to push garbage to rx fifo so we know it has finished sending
-    pio_sm_get_blocking(pio0, APP_VENDOR_SWD_SM);
+    pio_sm_get_blocking(pio, BIN_VENDOR_SWD_SM);
     DEBUG_PINS_CLR(probe_timing, DBG_PIN_WRITE_WAIT);
     DEBUG_PINS_CLR(probe_timing, DBG_PIN_WRITE);
 }
 
 static inline uint8_t probe_read_bits(uint bit_count) {
     DEBUG_PINS_SET(probe_timing, DBG_PIN_READ);
-    pio_sm_put_blocking(pio0, APP_VENDOR_SWD_SM, bit_count - 1);
-    uint32_t data = pio_sm_get_blocking(pio0, APP_VENDOR_SWD_SM);
+    pio_sm_put_blocking(pio, BIN_VENDOR_SWD_SM, bit_count - 1);
+    uint32_t data = pio_sm_get_blocking(pio, BIN_VENDOR_SWD_SM);
     uint8_t data_shifted = data >> 24;
 
     if (bit_count < 8) {
@@ -129,59 +133,13 @@ static inline uint8_t probe_read_bits(uint bit_count) {
 }
 
 static void probe_read_mode(void) {
-    pio_sm_exec(pio0, APP_VENDOR_SWD_SM, pio_encode_jmp(probe.offset + probe_offset_in_posedge));
-    while(pio0->dbg_padoe & (1 << APP_VENDOR_SWD_PIN_SWDIO));
+    pio_sm_exec(pio, BIN_VENDOR_SWD_SM, pio_encode_jmp(probe.offset + probe_offset_in_posedge));
+    while(pio->dbg_padoe & (1 << BIN_VENDOR_SWD_PIN_SWDIO));
 }
 
 static void probe_write_mode(void) {
-    pio_sm_exec(pio0, APP_VENDOR_SWD_SM, pio_encode_jmp(probe.offset + probe_offset_out_negedge));
-    while(!(pio0->dbg_padoe & (1 << APP_VENDOR_SWD_PIN_SWDIO)));
-}
-
-void vendor_swd_init() {
-    // Funcsel pins
-    pio_gpio_init(pio0, APP_VENDOR_SWD_PIN_SWCLK);
-    pio_gpio_init(pio0, APP_VENDOR_SWD_PIN_SWDIO);
-    // Make sure SWDIO has a pullup on it. Idle state is high
-    gpio_pull_up(APP_VENDOR_SWD_PIN_SWDIO);
-
-    // Target reset pin: pull up, input to emulate open drain pin
-    gpio_pull_up(APP_VENDOR_SWD_PIN_RESET);
-    // gpio_init will leave the pin cleared and set as input
-    gpio_init(APP_VENDOR_SWD_PIN_RESET);
-
-    uint offset = pio_add_program(pio0, &probe_program);
-    probe.offset = offset;
-
-    pio_sm_config sm_config = probe_program_get_default_config(offset);
-
-    // Set SWCLK as a sideset pin
-    sm_config_set_sideset_pins(&sm_config, APP_VENDOR_SWD_PIN_SWCLK);
-
-    // Set SWDIO offset
-    sm_config_set_out_pins(&sm_config, APP_VENDOR_SWD_PIN_SWDIO, 1);
-    sm_config_set_set_pins(&sm_config, APP_VENDOR_SWD_PIN_SWDIO, 1);
-    sm_config_set_in_pins(&sm_config, APP_VENDOR_SWD_PIN_SWDIO);
-
-    // Set SWD and SWDIO pins as output to start. This will be set in the sm
-    pio_sm_set_consecutive_pindirs(pio0, APP_VENDOR_SWD_SM, APP_VENDOR_SWD_PIN_OFFSET, 2, true);
-
-    // shift output right, autopull off, autopull threshold
-    sm_config_set_out_shift(&sm_config, true, false, 0);
-    // shift input right as swd data is lsb first, autopush off
-    sm_config_set_in_shift(&sm_config, true, false, 0);
-
-    // Init SM with config
-    pio_sm_init(pio0, APP_VENDOR_SWD_SM, offset, &sm_config);
-
-    // Set up divisor
-    probe_set_swclk_freq(1000);
-
-    // Enable SM
-    pio_sm_set_enabled(pio0, APP_VENDOR_SWD_SM, 1);
-
-    // Jump to write program
-    probe_write_mode();
+    pio_sm_exec(pio, BIN_VENDOR_SWD_SM, pio_encode_jmp(probe.offset + probe_offset_out_negedge));
+    while(!(pio->dbg_padoe & (1 << BIN_VENDOR_SWD_PIN_SWDIO)));
 }
 
 void probe_handle_read(uint total_bits) {
@@ -282,8 +240,38 @@ void probe_handle_pkt(void) {
     DEBUG_PINS_CLR(probe_timing, DBG_PIN_PKT);
 }
 
+
+// bin folder
+static void ush_handler_exec_pin(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
+    // TODO
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
+}
+static const struct ush_file_descriptor ush_files[] = {
+    {
+        .name = "p",
+        .description = "set the first pin to receive capture data",
+        .help = NULL,
+        .exec = ush_handler_exec_pin,
+    }
+};
+// sigrock command
+static void ush_handler_exec(struct ush_object *self, struct ush_file_descriptor const *file, int argc, char *argv[]) {
+    // TODO
+    ush_print(self, "NOT IMPLEMENTED.\r\n");
+}
+static const struct ush_file_descriptor ush_cmds[] = {
+    {
+        .name = "swd",
+        .description = "start swd app",
+        .help = NULL,
+        .exec = ush_handler_exec,
+    },
+};
+static struct ush_node_object ush_node_files, ush_node_cmds;
+
+
 // USB bits
-void vendor_swd_task(void) {
+static void vendor_swd_task(void *data) {
     if ( tud_vendor_available() ) {
         uint count = tud_vendor_read(&probe.rx_buf[probe.rx_len], 64);
         if (count == 0) {
@@ -298,4 +286,87 @@ void vendor_swd_task(void) {
             probe_handle_pkt();
         }
     }
+}
+
+static const consumer_meta_t user = {
+    .name = "VENDOR SWD PROBE",
+    .task = vendor_swd_task
+};
+
+void bin_vendor_swd_init(uint8 vend) {
+    // allocate resources
+    if (pin_alloc(BIN_VENDOR_SWD_PIN_SWCLK, &user)<0) {
+        LOG_WAR("%s can't allocate SWCLK pin %d", user.name, BIN_VENDOR_SWD_PIN_SWCLK);
+        return;
+    }
+    if (pin_alloc(BIN_VENDOR_SWD_PIN_SWDIO, &user)<0) {
+        LOG_WAR("%s can't allocate SWDIO pin %d", user.name, BIN_VENDOR_SWD_PIN_SWDIO);
+        pin_free(BIN_VENDOR_SWD_PIN_SWCLK);
+        return;
+    }
+    if (pin_alloc(BIN_VENDOR_SWD_PIN_RESET, &user)<0) {
+        LOG_WAR("%s can't allocate RESET pin %d", user.name, BIN_VENDOR_SWD_PIN_RESET)
+        pin_free(BIN_VENDOR_SWD_PIN_SWCLK);
+        pin_free(BIN_VENDOR_SWD_PIN_SWDIO);
+        return;
+    }
+    int8 pio_n = pio_alloc(BIN_VENDOR_SWD_PIO, &user);
+    if (pio_n<0) {
+        LOG_WAR("%s can't allocate PIO%d", user.name, BIN_VENDOR_SWD_PIO)
+        pin_free(BIN_VENDOR_SWD_PIN_SWCLK);
+        pin_free(BIN_VENDOR_SWD_PIN_SWDIO);
+        pin_free(BIN_VENDOR_SWD_PIN_RESET);
+        return;
+    } else {
+        pio = PIO_DEF[pio_n].id;
+    }
+
+    // ushell
+    ush_node_mount(ush, "/bin/sigrock", &ush_node_files, ush_files, sizeof(ush_files) / sizeof(ush_files[0]));
+    ush_commands_add(ush, &ush_node_cmds, ush_cmds, sizeof(ush_cmds) / sizeof(ush_cmds[0]));
+    LOG_INF("SWD init");
+
+    // Funcsel pins
+    pio_gpio_init(pio, BIN_VENDOR_SWD_PIN_SWCLK);
+    pio_gpio_init(pio, BIN_VENDOR_SWD_PIN_SWDIO);
+    // Make sure SWDIO has a pullup on it. Idle state is high
+    gpio_pull_up(BIN_VENDOR_SWD_PIN_SWDIO);
+
+    // Target reset pin: pull up, input to emulate open drain pin
+    gpio_pull_up(BIN_VENDOR_SWD_PIN_RESET);
+    // gpio_init will leave the pin cleared and set as input
+    gpio_init(BIN_VENDOR_SWD_PIN_RESET);
+
+    uint offset = pio_add_program(pio, &probe_program);
+    probe.offset = offset;
+
+    pio_sm_config sm_config = probe_program_get_default_config(offset);
+
+    // Set SWCLK as a sideset pin
+    sm_config_set_sideset_pins(&sm_config, BIN_VENDOR_SWD_PIN_SWCLK);
+
+    // Set SWDIO offset
+    sm_config_set_out_pins(&sm_config, BIN_VENDOR_SWD_PIN_SWDIO, 1);
+    sm_config_set_set_pins(&sm_config, BIN_VENDOR_SWD_PIN_SWDIO, 1);
+    sm_config_set_in_pins(&sm_config, BIN_VENDOR_SWD_PIN_SWDIO);
+
+    // Set SWD and SWDIO pins as output to start. This will be set in the sm
+    pio_sm_set_consecutive_pindirs(pio, BIN_VENDOR_SWD_SM, BIN_VENDOR_SWD_PIN_OFFSET, 2, true);
+
+    // shift output right, autopull off, autopull threshold
+    sm_config_set_out_shift(&sm_config, true, false, 0);
+    // shift input right as swd data is lsb first, autopush off
+    sm_config_set_in_shift(&sm_config, true, false, 0);
+
+    // Init SM with config
+    pio_sm_init(pio, BIN_VENDOR_SWD_SM, offset, &sm_config);
+
+    // Set up divisor
+    probe_set_swclk_freq(1000);
+
+    // Enable SM
+    pio_sm_set_enabled(pio, BIN_VENDOR_SWD_SM, 1);
+
+    // Jump to write program
+    probe_write_mode();
 }

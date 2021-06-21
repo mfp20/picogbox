@@ -1,7 +1,8 @@
-#ifndef APP_CDC_SIGROCK_H
-#define APP_CDC_SIGROCK_H
+#ifndef BIN_CDC_SIGROCK_H
+#define BIN_CDC_SIGROCK_H
 
-void cdc_sigrock_init(void);
-void cdc_sigrock_task(void);
+#include "picogbox.h"
+
+void cdc_sigrock_init(uint8 cdc);
 
 #endif
