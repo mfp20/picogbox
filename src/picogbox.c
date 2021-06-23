@@ -15,7 +15,7 @@
 #include "bin_cdc_microshell.h"
 #include "bin_cdc_binary.h"
 #include "bin_cdc_bridge_uart.h"
-//#include "bin_cdc_sigrock.h"
+#include "bin_cdc_capture.h"
 #include "bin_vendor_swd.h"
 
 #include <stdlib.h>
@@ -46,12 +46,22 @@ int main(void) {
     bin_cdc_microshell_init(0);
     bin_cdc_binary_init(1);
     bin_cdc_bridge_uart_init(1, 3);
-    //bin_cdc_sigrock_init(4);
+    bin_cdc_capture_init(4);
     // 5 unused
     bin_vendor_swd_init(0);
 
     repeating_timer_t loop_rp;
     add_repeating_timer_ms (10000, loop_rp_cb, NULL, &loop_rp);
+
+    for (uint8 i=0;i<task_no;i++) {
+        char *name = "not found";
+        for (int k=0;k<alloc_no;k++) {
+            LOG_INF("\t0x%08x %s", (int)alloc[k].user->task, alloc[k].user->name);
+            if (alloc[k].user->task == *task[i])
+                name = (char *) alloc[k].user->name;
+        }
+        LOG_INF("0x%08x -> 0x%08x %s", (int)task[i], (int)*task[i], name);
+    }
 
     // main loop start
     while (1) {
@@ -59,11 +69,13 @@ int main(void) {
         led_task();
         tud_task();
 
-        // application tasks
-        for (uint8 i=0;i<alloc_no;i++) {
-            if (alloc[i].user->task)
-                alloc[i].user->task(NULL);
+        // variable tasks
+        for (uint8 i=0;i<task_no;i++) {
+            if (*task[i]) {
+                (*(*task[i]))(NULL);
+            }
         }
+        tight_loop_contents();
     }
 
     return 0;

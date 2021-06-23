@@ -3,6 +3,9 @@
 
 #include <microshell.h>
 
+#include <stdarg.h>
+
 void bin_cdc_microshell_init(uint8 cdc);
+void ush_printf(const char* fmt, ...);
 
 #endif

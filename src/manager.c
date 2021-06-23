@@ -3,13 +3,53 @@
 
 #include <stdarg.h>
 
+
+// tasks register
+task_t *task[64];
+uint8 task_no = 0;
+
+void task_add(task_t *t) {
+    task[task_no] = t;
+    task_no++;
+}
+static int8 task_exist(task_t *t) {
+    for (int i=0;i<task_no;i++) {
+        if (task[i]==t) return i;
+    }
+    return -1;
+}
+static void task_compact(uint8 id) {
+    for (int i=id;i<task_no;i++) {
+        task[i] = task[i+1];
+    }
+}
+static void task_remove(task_t *task) {
+    int8 task_id = task_exist(task);
+    while (task_id>=0) {
+        task_compact(task_id);
+        task_no--;
+        task_id = task_exist(task);
+    }
+}
+
+
 // allocations register
 alloc_meta_t alloc[64];
 uint8 alloc_no = 0;
 
-static int8 alloc_search_by_user(uint8 type, char *name) {
+uint8 alloc_list_by_type(uint8 type, alloc_meta_t *list[]) {
+    uint8 count = 0;
     for (int i=0;i<alloc_no;i++) {
-        if ((alloc[i].type==type)&&(alloc[i].user->name==name)) return i;
+        if (alloc[i].type==type) {
+            list[count] = &alloc[i];
+            count++;
+        };
+    }
+    return count;
+}
+static int8 alloc_search_by_user(uint8 type, char *username) {
+    for (int i=0;i<alloc_no;i++) {
+        if ((alloc[i].type==type)&&(alloc[i].user->name==username)) return i;
     }
     return -1;
 }
@@ -18,10 +58,111 @@ static void alloc_compact(uint8 id) {
         alloc[i] = alloc[i+1];
     }
 }
+static void alloc_setup(uint8 id) {
+    // setup task
+    if (alloc[alloc_no].user->allow_multiple_exec) {
+        task[task_no] = (task_t *)&alloc[alloc_no].user->task;
+        task_no++;
+    } else {
+        if (task_exist((task_t *)&alloc[alloc_no].user->task)<0) {
+            task[task_no] = (task_t *)&alloc[alloc_no].user->task;
+            task_no++;
+        }
+    }
+    //
+    alloc_no++;
+}
 static void alloc_remove(uint8 type, char *name) {
     int8 alloc_id = alloc_search_by_user(type, name);
-    alloc_compact(alloc_id);
-    alloc_no--;
+    if (alloc_id>=0) {
+        // remove task(s)
+        task_remove((task_t *)&alloc[alloc_id].user->task);
+        // remove and compact alloc register
+        alloc_compact(alloc_id);
+        alloc_no--;
+    }
+}
+
+
+// DMA
+const dma_def_t DMA_DEF[12] = {
+    {
+        .id = 0,
+        .name = "DMA CH0"
+    },
+    {
+        .id = 1,
+        .name = "DMA CH1"
+    },
+    {
+        .id = 2,
+        .name = "DMA CH2"
+    },
+    {
+        .id = 3,
+        .name = "DMA CH3"
+    },
+    {
+        .id = 4,
+        .name = "DMA CH4"
+    },
+    {
+        .id = 5,
+        .name = "DMA CH5"
+    },
+    {
+        .id = 6,
+        .name = "DMA CH6"
+    },
+    {
+        .id = 7,
+        .name = "DMA CH7"
+    },
+    {
+        .id = 8,
+        .name = "DMA CH8"
+    },
+    {
+        .id = 9,
+        .name = "DMA CH9"
+    },
+    {
+        .id = 10,
+        .name = "DMA CH10"
+    },
+    {
+        .id = 11,
+        .name = "DMA CH11"
+    }
+};
+bool dma_avail[12];
+int dma_alloc(uint8 id, consumer_meta_t const* user) {
+    if (id>12) return -1;
+    if (dma_avail[id]) {
+        dma_avail[id] = false;
+        alloc[alloc_no].type = RSRC_DMA;
+        alloc[alloc_no].rsrc.name = DMA_DEF[id].name;
+        alloc[alloc_no].user = user;
+        alloc_setup(alloc_no);
+        LOG_NOT("DMA %d allocated by %s", id, user->name);
+        return id;
+    }
+    LOG_INF("DMA %d already in use", id);
+    return -1;
+}
+void dma_free(uint8 id) {
+    dma_avail[id] = true;
+    alloc_remove(RSRC_DMA, DMA_DEF[id].name);
+    LOG_NOT("DMA %d free'ed", id);
+}
+int dma_get(consumer_meta_t const* user) {
+    LOG_INF("Searching for dma...");
+    for (uint8 i=0;i<12;i++) {
+        if (dma_avail[i]) {
+            return dma_alloc(i, user);
+        }
+    }
+    return -1;
 }
 
 
@@ -607,8 +748,8 @@ int pin_alloc(uint8 id, consumer_meta_t const* user) {
         alloc[alloc_no].type = RSRC_PIN;
         alloc[alloc_no].rsrc.name = PIN_DEF[id].name;
         alloc[alloc_no].user = user;
-        alloc_no++;
-        LOG_NOT("PIN %d allocated", id);
+        alloc_setup(alloc_no);
+        LOG_NOT("PIN %d allocated by %s", id, user->name);
         return id;
     }
     LOG_INF("PIN %d already in use", id);
@@ -636,6 +777,7 @@ int pin_get(consumer_meta_t const* user, bool digital, bool analog, bool input, 
     return -1;
 }
 
+
 // PIO
 const pio_def_t PIO_DEF[PIO_NO] = {
     {
@@ -655,8 +797,8 @@ int pio_alloc(uint8 id, consumer_meta_t const* user) {
         alloc[alloc_no].type = RSRC_PIO;
         alloc[alloc_no].rsrc.name = PIO_DEF[id].name;
         alloc[alloc_no].user = user;
-        alloc_no++;
-        LOG_NOT("PIO %d allocated", id);
+        alloc_setup(alloc_no);
+        LOG_NOT("PIO %d allocated by %s", id, user->name);
         return id;
     }
     LOG_INF("PIO %d already in use", id);
@@ -716,16 +858,16 @@ int usb_cdc_alloc(uint8 id, consumer_meta_t const* user) {
         alloc[alloc_no].type = RSRC_CDC;
         alloc[alloc_no].rsrc.name = USB_CDC_DEF[id].name;
         alloc[alloc_no].user = user;
-        alloc_no++;
-        LOG_NOT("USB CDC %d allocated", id);
+        alloc_setup(alloc_no);
+        LOG_NOT("USB CDC %d allocated by %s", id, user->name);
         return id;
     }
     LOG_INF("USB CDC %d already in use", id);
     return -1;
 }
 void usb_cdc_free(uint8 id) {
-    usb_cdc_avail[id] = true;
     alloc_remove(RSRC_CDC, USB_CDC_DEF[id].name);
+    usb_cdc_avail[id] = true;
     LOG_NOT("USB CDC %d free'ed", id);
 }
 int usb_cdc_get(consumer_meta_t const* user) {
@@ -757,8 +899,8 @@ int usb_vendor_alloc(uint8 id, consumer_meta_t const* user) {
         alloc[alloc_no].type = RSRC_VEN;
         alloc[alloc_no].rsrc.name = USB_VENDOR_DEF[id].name;
         alloc[alloc_no].user = user;
-        alloc_no++;
-        LOG_NOT("USB VENDOR %d allocated", id);
+        alloc_setup(alloc_no);
+        LOG_NOT("USB VENDOR %d allocated by %s", id, user->name);
         return id;
     }
     return -1;
@@ -799,8 +941,8 @@ int UARTDEV_ALLOC(uint8 id, consumer_meta_t const* user) {
         alloc[alloc_no].type = RSRC_UART;
         alloc[alloc_no].rsrc.name = UART_DEF[id].name;
         alloc[alloc_no].user = user;
-        alloc_no++;
-        LOG_NOT("UART DEV%d allocated", id);
+        alloc_setup(alloc_no);
+        LOG_NOT("UART DEV%d allocated by %s", id, user->name);
         return id;
     }
     LOG_INF("UART DEV%d already in use", id);
@@ -910,8 +1052,8 @@ int I2CDEV_ALLOC(uint8 id, consumer_meta_t const* user) {
         alloc[alloc_no].type = RSRC_I2C;
         alloc[alloc_no].rsrc.name = I2C_DEF[id].name;
         alloc[alloc_no].user = user;
-        alloc_no++;
-        LOG_NOT("I2C DEV%d allocated", id);
+        alloc_setup(alloc_no);
+        LOG_NOT("I2C DEV%d allocated by %s", id, user->name);
         return id;
     }
     LOG_INF("I2C DEV%d already in use", id);
@@ -1020,8 +1162,8 @@ int SPIDEV_ALLOC(uint8 id, consumer_meta_t const* user) {
         alloc[alloc_no].type = RSRC_SPI;
         alloc[alloc_no].rsrc.name = SPI_DEF[id].name;
         alloc[alloc_no].user = user;
-        alloc_no++;
-        LOG_NOT("SPI DEV%d allocated", id);
+        alloc_setup(alloc_no);
+        LOG_NOT("SPI DEV%d allocated by %s", id, user->name);
         return id;
     }
     LOG_INF("SPI DEV%d already in use", id);
@@ -1184,11 +1326,15 @@ int spi_get(consumer_meta_t const* user, uint8 cs_count) {
     return -1;
 }
 
+
 // global microshell object ptr
 ush_object_ptr_t ush;
 
+
 //
 void manager_init(void) {
+    for (int i=0;i<12;i++)
+        dma_avail[i] = true;
     for (int i=0;i<PIN_NO;i++) {
         if ((!PIN_DEF[i].wired)&&(PIN_DEF[i].onboard)) {
             pin_avail[i] = true;
@@ -1200,6 +1346,8 @@ void manager_init(void) {
                 pin_wired[i] = false;
         }
     }
+    for (int i=0;i<PIO_NO;i++)
+        pio_avail[i] = true;
     for (int i=0;i<USB_CDC_NO;i++)
         usb_cdc_avail[i] = true;
     for (int i=0;i<USB_VENDOR_NO;i++)

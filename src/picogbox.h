@@ -25,9 +25,6 @@
 #define BIN_VENDOR_SWD_PIN_RESET 28
 #define BIN_VENDOR_SWD_PIO 0
 
-// sigrock
-#define BIN_VENDOR_SIGROCK_PIO 1
-
 // SUMP protocol
 #define APP_CDC_SUMP_INTF		        5
 #define APP_CDC_SUMP_PIN_SAMPLING_FIRST	6

@@ -28,7 +28,7 @@ add_executable(picogbox
         src/bin_cdc_binary.c
         src/bin_cdc_bridge_uart.c
         src/bin_cdc_sump.c
-        src/bin_cdc_sigrock.c
+        src/bin_cdc_capture.c
         src/bin_vendor_swd.c
         src/picogbox.c
 )

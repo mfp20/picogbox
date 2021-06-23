@@ -142,7 +142,8 @@ enum spi_e {
 };
 
 enum resource_type_e {
-    RSRC_PIN = 0,
+    RSRC_DMA = 0,
+    RSRC_PIN,
     RSRC_PIO,
     RSRC_CDC,
     RSRC_VEN,
@@ -159,6 +160,7 @@ typedef struct resource_meta_s {
 typedef struct consumer_meta_s {
     char const* name;
     task_t task;
+    bool allow_multiple_exec;
 } consumer_meta_t;
 
 typedef struct alloc_meta_s {
@@ -166,6 +168,11 @@ typedef struct alloc_meta_s {
     resource_meta_t rsrc;
     consumer_meta_t const* user;
 } alloc_meta_t;
+
+typedef struct dma_def_s {
+    uint8 id;
+    char *name;
+} dma_def_t;
 
 typedef struct pin_def_s {
     uint8 id;
@@ -211,9 +218,12 @@ typedef struct spi_def_s {
 
 
 //
+extern task_t *task[64];
+extern uint8 task_no;
 extern alloc_meta_t alloc[64];
 extern uint8 alloc_no;
 extern ush_object_ptr_t ush;
+extern const dma_def_t DMA_DEF[12];
 extern const pin_def_t PIN_DEF[PIN_NO];
 extern const pio_def_t PIO_DEF[PIO_NO];
 extern const usb_cdc_def_t USB_CDC_DEF[6];
@@ -223,6 +233,13 @@ extern const i2c_def_t I2C_DEF[2];
 extern const spi_def_t SPI_DEF[2];
 
 void manager_init(void);
+void task_add(task_t *task);
+uint8 alloc_list_by_type(uint8 type, alloc_meta_t *list[]);
+
+// dma
+int dma_alloc(uint8 id, consumer_meta_t const* user);
+void dma_free(uint8 id);
+int dma_get(consumer_meta_t const* user);
 
 // pin
 int pin_alloc(uint8 id, consumer_meta_t const* user);

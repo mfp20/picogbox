@@ -10,3 +10,4 @@ uint32 monotonic32(void) {
 uint64 monotonic64(void) {
     return time_us_64();
 }
+

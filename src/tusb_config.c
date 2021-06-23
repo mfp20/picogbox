@@ -360,7 +360,6 @@ void usb_cdc_stdio(uint8 id, consumer_meta_t const* user, bool stdio) {
     LOG_WAR("Coudn't bind stdio to USB CDC %d", id);
     return;
   }
-  LOG_INF("Standard I/O on CDC%d", id);
   LOG_EME("emergency log entry");
   LOG_ALE("alert log entry");
   LOG_CRI("critical log entry");
